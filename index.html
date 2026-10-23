@@ -1,0 +1,2899 @@
+```html
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Aether Isles: Awakening - 3D Open World Action RPG</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+      touch-action: none;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #050b14;
+      font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    }
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+
+    #ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    }
+
+    /* ボス専用巨大HPバー（画面上部中央） */
+    #boss-hud {
+      display: none;
+      position: absolute;
+      top: max(16px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(88vw, 480px);
+      background: linear-gradient(135deg, rgba(20, 10, 10, 0.95), rgba(40, 10, 10, 0.85));
+      border: 2px solid #ff2200;
+      box-shadow: 0 0 25px rgba(255, 34, 0, 0.6);
+      border-radius: 12px;
+      padding: 8px 16px;
+      pointer-events: auto;
+      z-index: 20;
+    }
+    .boss-header {
+      display: flex;
+      justify-content: space-between;
+      color: #ffcc00;
+      font-size: 13px;
+      font-weight: 900;
+      margin-bottom: 4px;
+      text-shadow: 0 0 4px #000;
+    }
+    .boss-bar-bg {
+      width: 100%;
+      height: 14px;
+      background: rgba(0, 0, 0, 0.8);
+      border-radius: 7px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .boss-hp-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #ff0044, #ff5500);
+      box-shadow: 0 0 10px #ff0044;
+      transition: width 0.2s ease-out;
+    }
+
+    /* 左上：プレイヤーステータス ＆ 実レベルHUD */
+    .top-left-hud {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: auto;
+      width: fit-content;
+    }
+    .player-hud {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: linear-gradient(135deg, rgba(16, 24, 48, 0.92), rgba(8, 12, 24, 0.8));
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      border-radius: 14px;
+      padding: 10px 18px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 200, 255, 0.2);
+      backdrop-filter: blur(8px);
+    }
+    .avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(45deg, #ff0055, #ff7700);
+      border: 2px solid #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 18px;
+      color: #fff;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      box-shadow: 0 0 10px rgba(255, 80, 0, 0.6);
+    }
+    .bars-container {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 190px;
+    }
+    .hud-header {
+      display: flex;
+      justify-content: space-between;
+      color: #fff;
+      font-size: 12px;
+      font-weight: bold;
+      text-shadow: 0 1px 2px #000;
+    }
+    .hud-header .level-badge {
+      color: #00ffcc;
+      text-shadow: 0 0 8px rgba(0,255,204,0.6);
+    }
+    .fruit-mastery-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 800;
+      margin-top: 2px;
+    }
+    .gold-badge {
+      color: #ffd700;
+      font-weight: 900;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .bar-bg {
+      width: 100%;
+      height: 9px;
+      background: rgba(0, 0, 0, 0.65);
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      position: relative;
+    }
+    .hp-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #ff0055, #ff4d00);
+      box-shadow: 0 0 8px #ff0055;
+      transition: width 0.2s ease-out;
+    }
+    .exp-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #00d2ff, #00fff2);
+      box-shadow: 0 0 8px #00fff2;
+      transition: width 0.3s ease-out;
+    }
+    .fruit-exp-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #b5179e, #7209b7, #4cc9f0);
+      box-shadow: 0 0 8px #b5179e;
+      transition: width 0.3s ease-out;
+    }
+
+    .hud-sub-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .btn-bag {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      border: 1px solid #60a5fa;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 5px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
+      transition: transform 0.15s;
+    }
+    .btn-bag:active { transform: scale(0.95); }
+    #safe-zone-badge {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 200, 255, 0.25);
+      border: 1px solid #00f0ff;
+      color: #00f0ff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 20px;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+    }
+    #regen-badge {
+      display: none;
+      align-items: center;
+      gap: 4px;
+      background: rgba(16, 185, 129, 0.25);
+      border: 1px solid #10b981;
+      color: #34d399;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 20px;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+      animation: pulseRegen 1.2s infinite;
+    }
+    #transform-badge {
+      display: none;
+      align-items: center;
+      gap: 4px;
+      background: rgba(234, 88, 12, 0.35);
+      border: 1px solid #ea580c;
+      color: #ffedd5;
+      font-size: 11px;
+      font-weight: 900;
+      padding: 4px 10px;
+      border-radius: 20px;
+      box-shadow: 0 0 12px rgba(234, 88, 12, 0.6);
+      animation: pulseRegen 1.0s infinite;
+    }
+    @keyframes pulseRegen {
+      0%, 100% { opacity: 0.95; }
+      50% { opacity: 0.6; }
+    }
+
+    .quest-hud {
+      position: absolute;
+      top: max(16px, env(safe-area-inset-top));
+      right: max(16px, env(safe-area-inset-right));
+      background: linear-gradient(135deg, rgba(20, 20, 35, 0.92), rgba(10, 10, 20, 0.75));
+      border: 1px solid rgba(255, 200, 0, 0.4);
+      border-left: 4px solid #ffbb00;
+      border-radius: 8px;
+      padding: 10px 16px;
+      min-width: 220px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      pointer-events: auto;
+    }
+    .quest-title {
+      font-size: 11px;
+      color: #ffbb00;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 800;
+      margin-bottom: 2px;
+    }
+    .quest-desc {
+      font-size: 13px;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .quest-progress {
+      font-size: 12px;
+      color: #00ffcc;
+      margin-top: 3px;
+      font-weight: bold;
+    }
+
+    .interact-btn {
+      display: none;
+      position: absolute;
+      top: 60%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 30px;
+      font-weight: 900;
+      font-size: 14px;
+      border: 2px solid #fff;
+      pointer-events: auto;
+      cursor: pointer;
+      z-index: 50;
+      animation: pulseBtn 1.5s infinite;
+    }
+    #interact-prompt {
+      background: linear-gradient(135deg, #ff9900, #ff5500);
+      box-shadow: 0 0 20px rgba(255, 120, 0, 0.8);
+    }
+    #boat-prompt {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      box-shadow: 0 0 20px rgba(2, 132, 199, 0.8);
+    }
+    @keyframes pulseBtn {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.08); }
+    }
+
+    .game-modal {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(92vw, 540px);
+      background: linear-gradient(135deg, rgba(15, 22, 40, 0.96), rgba(8, 12, 24, 0.94));
+      border: 2px solid #00f0ff;
+      box-shadow: 0 0 35px rgba(0, 240, 255, 0.4);
+      border-radius: 16px;
+      padding: 20px;
+      z-index: 100;
+      pointer-events: auto;
+      backdrop-filter: blur(12px);
+      color: #fff;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+    }
+    .modal-title {
+      font-size: 18px;
+      font-weight: 900;
+      color: #ffd700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: #aaa;
+      font-size: 20px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .modal-section {
+      margin-bottom: 14px;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 10px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .modal-section-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #00ffcc;
+      margin-bottom: 8px;
+    }
+    .quest-choice-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .btn-quest-tab {
+      flex: 1;
+      padding: 6px 10px;
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #cbd5e1;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 12px;
+    }
+    .btn-quest-tab.active {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #fff;
+    }
+    .fruit-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+    }
+    .fruit-item:last-child { border-bottom: none; }
+    .fruit-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .fruit-name {
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .fruit-desc {
+      font-size: 11px;
+      color: #aaa;
+      max-width: 320px;
+      line-height: 1.3;
+    }
+    .btn-action {
+      background: linear-gradient(135deg, #00e5ff, #0088ff);
+      color: #001;
+      font-weight: 900;
+      font-size: 12px;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-action.btn-eat {
+      background: linear-gradient(135deg, #ffaa00, #ff4400);
+      color: #fff;
+    }
+    .btn-action:disabled {
+      background: #444;
+      color: #888;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    #announcement {
+      position: absolute;
+      top: 25%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 36px;
+      font-weight: 900;
+      color: #ffe600;
+      text-shadow: 0 0 20px rgba(255, 230, 0, 0.9), 0 0 40px rgba(255, 100, 0, 0.8);
+      letter-spacing: 3px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      z-index: 100;
+      text-align: center;
+    }
+
+    #damage-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .damage-pop {
+      position: absolute;
+      font-weight: 900;
+      font-size: 22px;
+      color: #fff;
+      text-shadow: 0 0 4px #000, 0 0 10px rgba(255, 100, 0, 0.8);
+      animation: damageRise 0.8s ease-out forwards;
+    }
+    .damage-pop.heal {
+      color: #10b981;
+      font-size: 24px;
+      text-shadow: 0 0 4px #000, 0 0 12px rgba(16, 185, 129, 0.9);
+    }
+    .damage-pop.gold {
+      font-size: 20px;
+      color: #ffd700;
+      text-shadow: 0 0 4px #000, 0 0 12px rgba(255, 215, 0, 0.9);
+    }
+    .damage-pop.crit {
+      font-size: 30px;
+      color: #ff3300;
+      text-shadow: 0 0 6px #000, 0 0 15px #ffaa00;
+    }
+    @keyframes damageRise {
+      0% { opacity: 1; transform: translate(-50%, 0) scale(1.4); }
+      20% { transform: translate(-50%, -15px) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -45px) scale(0.8); }
+    }
+
+    .controls-hint {
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 11px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 5px 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(4px);
+      margin-bottom: 8px;
+    }
+
+    .bottom-hud {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: max(6px, env(safe-area-inset-bottom));
+      position: relative;
+      width: 100%;
+    }
+    .hotbar {
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .skill-slot {
+      width: 60px;
+      height: 60px;
+      background: rgba(15, 20, 35, 0.9);
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: bold;
+      position: relative;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      touch-action: manipulation;
+    }
+    .skill-slot:active { transform: scale(0.92); }
+    .skill-slot.locked {
+      opacity: 0.45;
+      border-color: rgba(255, 255, 255, 0.1) !important;
+      background: rgba(10, 12, 20, 0.75);
+    }
+    .skill-key {
+      position: absolute;
+      top: 3px;
+      left: 5px;
+      font-size: 10px;
+      color: #ffbb00;
+      font-weight: 900;
+    }
+    .skill-req {
+      position: absolute;
+      top: 3px;
+      right: 5px;
+      font-size: 8px;
+      color: #ff4444;
+      font-weight: bold;
+    }
+    .skill-name {
+      font-size: 10px;
+      margin-top: 10px;
+      text-shadow: 0 1px 2px #000;
+      text-align: center;
+      padding: 0 2px;
+    }
+    .cooldown-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 0%;
+      background: rgba(0, 0, 0, 0.75);
+      border-radius: 10px;
+    }
+
+    #mobile-controls {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 12;
+    }
+    #joystick-zone {
+      position: absolute;
+      bottom: max(24px, env(safe-area-inset-bottom));
+      left: max(24px, env(safe-area-inset-left));
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 240, 255, 0.1) 0%, rgba(10, 20, 40, 0.45) 100%);
+      border: 2px dashed rgba(0, 240, 255, 0.4);
+      pointer-events: auto;
+      touch-action: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #joystick-thumb {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #00f0ff 0%, #0077aa 100%);
+      box-shadow: 0 0 14px rgba(0, 240, 255, 0.7);
+      pointer-events: none;
+      transform: translate(0px, 0px);
+    }
+    #btn-mobile-jump {
+      position: absolute;
+      bottom: calc(max(24px, env(safe-area-inset-bottom)) + 76px);
+      right: max(20px, env(safe-area-inset-right));
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: rgba(20, 30, 50, 0.85);
+      border: 2px solid rgba(0, 255, 204, 0.6);
+      color: #00ffcc;
+      font-weight: 900;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      box-shadow: 0 0 12px rgba(0, 255, 204, 0.4);
+      touch-action: manipulation;
+    }
+    #btn-mobile-jump:active {
+      transform: scale(0.9);
+      background: rgba(0, 255, 204, 0.3);
+    }
+
+    @media (pointer: fine) {
+      #joystick-zone { opacity: 0.3; }
+      #btn-mobile-jump { opacity: 0.3; }
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <div id="damage-container"></div>
+
+  <div id="ui-layer">
+    <!-- 画面上部：ボスHPバー -->
+    <div id="boss-hud">
+      <div class="boss-header">
+        <span id="boss-name-txt">BOSS: キャプテン・アイアンハート</span>
+        <span id="boss-hp-txt">600 / 600</span>
+      </div>
+      <div class="boss-bar-bg">
+        <div class="boss-hp-fill" id="boss-hp-bar"></div>
+      </div>
+    </div>
+
+    <!-- 左上：キャラステータス ＆ 実レベルHUD -->
+    <div class="top-left-hud">
+      <div class="player-hud">
+        <div class="avatar">剣</div>
+        <div class="bars-container">
+          <div class="hud-header">
+            <span>冒険者</span>
+            <span class="level-badge" id="level-txt">Lv. 1</span>
+          </div>
+          <div class="bar-bg">
+            <div class="hp-fill" id="hp-bar"></div>
+          </div>
+          <div class="bar-bg" style="height: 5px;">
+            <div class="exp-fill" id="exp-bar"></div>
+          </div>
+          
+          <div class="fruit-mastery-header">
+            <span class="current-fruit-badge" id="current-fruit-txt">無能力</span>
+            <span id="fruit-level-txt" style="color: #c084fc;">実 Lv. 1</span>
+          </div>
+          <div class="bar-bg" style="height: 5px;">
+            <div class="fruit-exp-fill" id="fruit-exp-bar"></div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+            <div class="gold-badge">💰 <span id="gold-txt">40</span> Gold</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hud-sub-row">
+        <button class="btn-bag" id="btn-open-bag">🎒 バッグ [B]</button>
+        <div id="safe-zone-badge">🛡️ 安全地帯</div>
+        <div id="regen-badge">💚 自然回復中 (+10%/s)</div>
+        <div id="transform-badge">⚡ 変身中 (<span id="transform-timer-txt">25</span>s)</div>
+      </div>
+    </div>
+
+    <div class="quest-hud">
+      <div class="quest-title" id="quest-island-title">ドーン島 クエスト</div>
+      <div class="quest-desc" id="quest-desc">商人バルバロから依頼を受注しよう</div>
+      <div class="quest-progress" id="quest-progress">状態: 未受注</div>
+    </div>
+
+    <div id="announcement">LEVEL UP!</div>
+    
+    <div class="interact-btn" id="interact-prompt">[Q] 商人と話す</div>
+    <div class="interact-btn" id="boat-prompt">[T] 出航する</div>
+
+    <div class="bottom-hud">
+      <div class="controls-hint">
+        [PC] WASD:移動 | Space:ジャンプ | 右ドラッグ:視点 | 左クリック:斬撃 | [Z][X][C][V]:能力 | Q:会話 | T:出航 | B:鞄
+      </div>
+      <div class="hotbar">
+        <div class="skill-slot" id="btn-attack">
+          <span class="skill-key">M1</span>
+          <span class="skill-name">通常斬撃</span>
+        </div>
+        <div class="skill-slot locked" id="slot-z">
+          <span class="skill-key">Z</span>
+          <span class="skill-req" id="req-z">Lv.1</span>
+          <div class="cooldown-overlay" id="cd-z"></div>
+          <span class="skill-name" id="name-z">未習得</span>
+        </div>
+        <div class="skill-slot locked" id="slot-x">
+          <span class="skill-key">X</span>
+          <span class="skill-req" id="req-x">Lv.3</span>
+          <div class="cooldown-overlay" id="cd-x"></div>
+          <span class="skill-name" id="name-x">未習得</span>
+        </div>
+        <div class="skill-slot locked" id="slot-c">
+          <span class="skill-key">C</span>
+          <span class="skill-req" id="req-c">Lv.6</span>
+          <div class="cooldown-overlay" id="cd-c"></div>
+          <span class="skill-name" id="name-c">未習得</span>
+        </div>
+        <div class="skill-slot locked" id="slot-v">
+          <span class="skill-key">V</span>
+          <span class="skill-req" id="req-v">Lv.10</span>
+          <div class="cooldown-overlay" id="cd-v"></div>
+          <span class="skill-name" id="name-v">未習得</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NPC交易所 ＆ クエスト受注モーダル -->
+  <div class="game-modal" id="merchant-modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-npc-name">⛵ 商人バルバロの交易所</div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-section-title">📜 依頼の選択（通常討伐 / ボス討伐）</div>
+      <div class="quest-choice-row">
+        <button class="btn-quest-tab active" id="tab-normal-quest">雑兵海賊 討伐</button>
+        <button class="btn-quest-tab" id="tab-boss-quest">島ボス 討伐！</button>
+      </div>
+      <div id="modal-quest-info" style="font-size: 13px; margin-bottom: 8px;"></div>
+      <button class="btn-action" id="btn-quest-action">この依頼を受注する</button>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-section-title">🍈 秘宝の実の仕入れ（購入して鞄に入れる）</div>
+      
+      <div class="fruit-item">
+        <div class="fruit-info">
+          <span class="fruit-name" style="color: #ff6600;">🔥 炎帝の実 (Flame Fruit)</span>
+          <span class="fruit-desc">炎の4大技（火弾・炎柱・炎翔突進・大紅蓮炎帝）</span>
+        </div>
+        <button class="btn-action" id="btn-buy-flame">購入 (60 G)</button>
+      </div>
+
+      <div class="fruit-item">
+        <div class="fruit-info">
+          <span class="fruit-name" style="color: #c084fc;">⚡ 雷鳴の実 (Thunder Fruit)</span>
+          <span class="fruit-desc">雷の4大技（紫電・雷鳥スタン・瞬雷テレポート・万雷招来）</span>
+        </div>
+        <button class="btn-action" id="btn-buy-thunder">購入 (100 G)</button>
+      </div>
+
+      <div class="fruit-item">
+        <div class="fruit-info">
+          <span class="fruit-name" style="color: #38bdf8;">❄️ 氷結の実 (Ice Fruit)</span>
+          <span class="fruit-desc">氷の4大技（三連氷槍・霜の檻・氷上滑走・氷河時代）</span>
+        </div>
+        <button class="btn-action" id="btn-buy-ice">購入 (150 G)</button>
+      </div>
+
+      <div class="fruit-item">
+        <div class="fruit-info">
+          <span class="fruit-name" style="color: #f59e0b;">🦊 妖狐の実 (Kitsune Fruit)</span>
+          <span class="fruit-desc">狐火弾・狐影滅殺・【V技: 九尾変身(速度+65%/攻+100%/軽減30%)】</span>
+        </div>
+        <button class="btn-action" id="btn-buy-kitsune">購入 (220 G)</button>
+      </div>
+
+      <div class="fruit-item">
+        <div class="fruit-info">
+          <span class="fruit-name" style="color: #06b6d4;">🦅 不死鳥の実 (Phoenix Fruit)</span>
+          <span class="fruit-desc">蒼炎弾・再生の大炎(HP40%回復)・【V技: 蒼蓮不死鳥変身(常時治癒/防御+50%)】</span>
+        </div>
+        <button class="btn-action" id="btn-buy-phoenix">購入 (260 G)</button>
+      </div>
+
+      <div class="fruit-item">
+        <div class="fruit-info">
+          <span class="fruit-name" style="color: #eab308;">🐆 レオパルドの実 (Leopard Fruit)</span>
+          <span class="fruit-desc">豹牙爪弾・獣王咆哮・【V技: 豹獣人化変身(攻撃力+130%/超絶火力)】</span>
+        </div>
+        <button class="btn-action" id="btn-buy-leopard">購入 (320 G)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="game-modal" id="bag-modal">
+    <div class="modal-header">
+      <div class="modal-title">🎒 所持品（悪魔の実の保管鞄）</div>
+      <button class="modal-close" id="bag-close-btn">✕</button>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">所持している秘宝の実（食べるとその実の能力者になる）</div>
+      <div id="bag-fruit-list"></div>
+    </div>
+  </div>
+
+  <div id="mobile-controls">
+    <div id="joystick-zone">
+      <div id="joystick-thumb"></div>
+    </div>
+    <div id="btn-mobile-jump">JUMP</div>
+  </div>
+
+  <script>
+    const SKILL_UNLOCK_LEVELS = [1, 3, 6, 10];
+
+    // 全6種類の悪魔の実マスターデータ
+    const FRUIT_DATABASE = {
+      flame: {
+        id: 'flame',
+        name: '炎帝の実',
+        color: '#ff5500',
+        skills: [
+          { key: 'Z', name: '炎弾連射', cd: 2.5, reqLv: 1, desc: '前方に高速火炎弾を射出し爆発' },
+          { key: 'X', name: '大炎柱', cd: 5.0, reqLv: 3, desc: '足元から天を突く巨大火柱を吹き上げる' },
+          { key: 'C', name: '炎翔突進', cd: 4.0, reqLv: 6, desc: '炎の翼で前方に高速ロケットダッシュ' },
+          { key: 'V', name: '大紅蓮・炎帝', cd: 11.0, reqLv: 10, desc: '巨大な太陽を投下する広範囲壊滅技' }
+        ]
+      },
+      thunder: {
+        id: 'thunder',
+        name: '雷鳴の実',
+        color: '#c084fc',
+        skills: [
+          { key: 'Z', name: '紫電一閃', cd: 2.0, reqLv: 1, desc: '前方に超高速の電撃レーザー' },
+          { key: 'X', name: '雷鳥スタン', cd: 5.0, reqLv: 3, desc: '敵を行動不能にする稲妻の怪鳥' },
+          { key: 'C', name: '瞬雷ステップ', cd: 3.5, reqLv: 6, desc: '雷光となって前方へ瞬間テレポート' },
+          { key: 'V', name: '万雷招来', cd: 12.0, reqLv: 10, desc: '天から無数の紫電が降り注ぐ神の裁き' }
+        ]
+      },
+      ice: {
+        id: 'ice',
+        name: '氷結の実',
+        color: '#38bdf8',
+        skills: [
+          { key: 'Z', name: '三連氷槍', cd: 2.5, reqLv: 1, desc: '3本の鋭利な氷槍を扇状射出' },
+          { key: 'X', name: '霜の檻', cd: 5.0, reqLv: 3, desc: '敵の足元を凍結させ完全拘束' },
+          { key: 'C', name: '氷上滑走', cd: 4.0, reqLv: 6, desc: '地面を凍らせて超高速スライディング' },
+          { key: 'V', name: '氷河時代', cd: 12.0, reqLv: 10, desc: '全方位に巨大な氷柱が乱立する絶対零度' }
+        ]
+      },
+      // ★ 狐の実（九尾変身）
+      kitsune: {
+        id: 'kitsune',
+        name: '妖狐の実',
+        color: '#f59e0b',
+        skills: [
+          { key: 'Z', name: '狐火弾', cd: 2.2, reqLv: 1, desc: '神聖な追尾狐火を放つ' },
+          { key: 'X', name: '狐影滅殺', cd: 5.0, reqLv: 3, desc: '幻影となって前方の敵を滅多斬り' },
+          { key: 'C', name: '神速歩', cd: 3.5, reqLv: 6, desc: '霊光を纏い超高速ダッシュ' },
+          { key: 'V', name: '【九尾変身】妖狐解放', cd: 28.0, reqLv: 10, desc: '九本の尾を生やし速度+65%/攻+100%/被ダメ30%減' }
+        ]
+      },
+      // ★ 不死鳥の実（青蓮変身）
+      phoenix: {
+        id: 'phoenix',
+        name: '不死鳥の実',
+        color: '#06b6d4',
+        skills: [
+          { key: 'Z', name: '蒼炎衝', cd: 2.2, reqLv: 1, desc: '一直線に貫通する蒼炎波' },
+          { key: 'X', name: '再生の大炎', cd: 8.0, reqLv: 3, desc: 'HPを瞬時に40%超回復＋周囲ダメージ' },
+          { key: 'C', name: '飛翔翼', cd: 4.5, reqLv: 6, desc: '蒼炎の翼を広げ空を高速飛行' },
+          { key: 'V', name: '【不死鳥変身】蒼蓮化', cd: 28.0, reqLv: 10, desc: '全身蒼炎化！常時HP毎秒8%治癒/防御+50%/攻+70%' }
+        ]
+      },
+      // ★ レオパルドの実（豹獣人変身）
+      leopard: {
+        id: 'leopard',
+        name: 'レオパルドの実',
+        color: '#eab308',
+        skills: [
+          { key: 'Z', name: '豹牙爪弾', cd: 1.8, reqLv: 1, desc: '猛烈な速度で真空の爪撃を連射' },
+          { key: 'X', name: '獣王咆哮', cd: 5.0, reqLv: 3, desc: '衝撃波で敵を吹き飛ばしスタン' },
+          { key: 'C', name: '野性跳躍', cd: 3.5, reqLv: 6, desc: '前方の敵へ一瞬で飛びかかり強襲' },
+          { key: 'V', name: '【豹変身】豹獣人覚醒', cd: 28.0, reqLv: 10, desc: '豹獣人化！攻撃力+130%/速度+50%/強烈吹飛' }
+        ]
+      }
+    };
+
+    function getIslandTerrainHeight(x, z) {
+      const r1 = Math.hypot(x, z);
+      if (r1 <= 82) {
+        const undul = (Math.sin(x * 0.08) * Math.cos(z * 0.08) * 1.6) + (Math.sin(x * 0.15) * 0.5);
+        if (r1 <= 48) return 9.5 + undul;
+        if (r1 <= 72) {
+          const t = (r1 - 48) / (72 - 48);
+          return THREE.MathUtils.lerp(9.5, 1.0, t * t * (3 - 2 * t)) + undul * (1.0 - t);
+        }
+        return THREE.MathUtils.lerp(1.0, 0.0, (r1 - 72) / (82 - 72));
+      }
+
+      const dx2 = x - 180, dz2 = z - (-180);
+      const r2 = Math.hypot(dx2, dz2);
+      if (r2 <= 75) {
+        const volUndul = Math.sin(x * 0.1) * Math.cos(z * 0.1) * 2.2;
+        if (r2 <= 20) return 12.0 + (r2 / 20) * 4.0 + volUndul * 0.5;
+        if (r2 <= 46) return THREE.MathUtils.lerp(16.0, 10.5, (r2 - 20) / (46 - 20)) + volUndul;
+        if (r2 <= 66) {
+          const t = (r2 - 46) / (66 - 46);
+          return THREE.MathUtils.lerp(10.5, 1.2, t * t * (3 - 2 * t)) + volUndul * (1.0 - t);
+        }
+        return THREE.MathUtils.lerp(1.2, 0.0, (r2 - 66) / (75 - 66));
+      }
+
+      return null;
+    }
+
+    function getGroundHeight(x, z) {
+      if (Math.abs(x) <= 3.2 && z >= 48 && z <= 72) {
+        const tH = getIslandTerrainHeight(x, z);
+        return tH !== null ? Math.max(1.7, tH) : 1.7;
+      }
+      if (Math.abs(x - 180) <= 3.2 && z >= -128 && z <= -104) {
+        const tH = getIslandTerrainHeight(x, z);
+        return tH !== null ? Math.max(1.7, tH) : 1.7;
+      }
+      return getIslandTerrainHeight(x, z);
+    }
+
+    // ==========================================
+    // 2. ゲーム全体の状態管理 (State)
+    // ==========================================
+    const gameState = {
+      player: {
+        hp: 100,
+        maxHp: 100,
+        baseHp: 100,
+        level: 1,
+        exp: 0,
+        maxExp: 100,
+        gold: 80,
+        baseAttackPower: 25,
+        attackPower: 25,
+        baseSpeed: 14,
+        speed: 14,
+        isAttacking: false,
+        attackCooldown: 0,
+        attackDuration: 0.3,
+        lastCombatTime: 0,
+        regenTimer: 0,
+        currentFruit: null,
+        skillCooldowns: [0, 0, 0, 0],
+        inventory: ['flame'],
+        spawnPoint: new THREE.Vector3(0, 11, 0),
+        currentIsland: 1,
+        fallTimer: 0,
+        inSafeZone: false,
+        // ★ 変身状態管理
+        transform: {
+          active: false,
+          type: null,
+          timer: 0,
+          maxDuration: 25.0
+        }
+      },
+      fruitMastery: {
+        flame: { level: 1, exp: 0, maxExp: 40 },
+        thunder: { level: 1, exp: 0, maxExp: 40 },
+        ice: { level: 1, exp: 0, maxExp: 40 },
+        kitsune: { level: 1, exp: 0, maxExp: 40 },
+        phoenix: { level: 1, exp: 0, maxExp: 40 },
+        leopard: { level: 1, exp: 0, maxExp: 40 }
+      },
+      quest: {
+        island: 1,
+        isBossQuest: false,
+        title: "島を脅かす野盗海賊の討伐",
+        targetKills: 3,
+        currentKills: 0,
+        rewardGold: 100,
+        rewardExp: 120,
+        rewardFruitExp: 60,
+        status: "NOT_ACCEPTED"
+      },
+      safeZones: [
+        { id: 1, x: 0, z: 26, radius: 14.0 },
+        { id: 2, x: 180, z: -140, radius: 14.0 }
+      ]
+    };
+
+    // ==========================================
+    // 3. Three.js セットアップ
+    // ==========================================
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x60a5fa);
+    scene.fog = new THREE.FogExp2(0x60a5fa, 0.0075);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1400);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+    container.appendChild(renderer.domElement);
+
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x334466, 0.85);
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xfffaed, 1.25);
+    dirLight.position.set(100, 160, 60);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    dirLight.shadow.camera.near = 10;
+    dirLight.shadow.camera.far = 420;
+    const d = 150;
+    dirLight.shadow.camera.left = -d;
+    dirLight.shadow.camera.right = d;
+    dirLight.shadow.camera.top = d;
+    dirLight.shadow.camera.bottom = -d;
+    scene.add(dirLight);
+
+    // ==========================================
+    // 4. ワールド環境（海 ＆ 2つの島）
+    // ==========================================
+    const oceanGeo = new THREE.PlaneGeometry(1600, 1600, 48, 48);
+    const oceanMat = new THREE.MeshStandardMaterial({
+      color: 0x0088aa,
+      roughness: 0.1,
+      metalness: 0.8,
+      transparent: true,
+      opacity: 0.88,
+    });
+    const ocean = new THREE.Mesh(oceanGeo, oceanMat);
+    ocean.rotation.x = -Math.PI / 2;
+    ocean.position.y = -0.4;
+    scene.add(ocean);
+
+    const worldColliders = [];
+    function addCircleCollider(x, z, radius) { worldColliders.push({ type: 'circle', x, z, radius }); }
+    function addBoxCollider(x, z, halfX, halfZ) { worldColliders.push({ type: 'box', x, z, halfX, halfZ }); }
+
+    // --- 第1島：ドーン島 ---
+    const island1Group = new THREE.Group();
+    scene.add(island1Group);
+
+    const island1Geo = new THREE.CylinderGeometry(48, 52, 10, 48, 8);
+    const pos1 = island1Geo.attributes.position;
+    for (let i = 0; i < pos1.count; i++) {
+      let x = pos1.getX(i), y = pos1.getY(i), z = pos1.getZ(i);
+      pos1.setY(i, y > 0 ? (getIslandTerrainHeight(x, z) || 9.5) : 0.0);
+    }
+    island1Geo.computeVertexNormals();
+    const island1 = new THREE.Mesh(island1Geo, new THREE.MeshStandardMaterial({ color: 0x3d8c40, roughness: 0.8 }));
+    island1.receiveShadow = true;
+    island1Group.add(island1);
+
+    const beach1Geo = new THREE.RingGeometry(46, 80, 48, 8);
+    beach1Geo.rotateX(-Math.PI / 2);
+    const bPos1 = beach1Geo.attributes.position;
+    for (let i = 0; i < bPos1.count; i++) {
+      const x = bPos1.getX(i), z = bPos1.getZ(i);
+      const h = getIslandTerrainHeight(x, z);
+      bPos1.setY(i, h !== null ? h : -0.2);
+    }
+    beach1Geo.computeVertexNormals();
+    const beach1 = new THREE.Mesh(beach1Geo, new THREE.MeshStandardMaterial({ color: 0xeed699, roughness: 0.9, side: THREE.DoubleSide }));
+    beach1.receiveShadow = true;
+    island1Group.add(beach1);
+
+    const pier1 = new THREE.Mesh(new THREE.BoxGeometry(6, 1, 24), new THREE.MeshStandardMaterial({ color: 0x6e4a2e }));
+    pier1.position.set(0, 1.2, 60);
+    pier1.receiveShadow = true;
+    scene.add(pier1);
+
+    const boat1 = new THREE.Mesh(new THREE.BoxGeometry(5, 2, 10), new THREE.MeshStandardMaterial({ color: 0x992222 }));
+    boat1.position.set(0, 0.5, 74);
+    scene.add(boat1);
+    addBoxCollider(0, 74, 2.8, 5.2);
+
+    // --- 第2島：カルデラ火山島 (x: 180, z: -180) ---
+    const island2Group = new THREE.Group();
+    scene.add(island2Group);
+
+    const island2Geo = new THREE.CylinderGeometry(46, 50, 16, 48, 10);
+    const pos2 = island2Geo.attributes.position;
+    for (let i = 0; i < pos2.count; i++) {
+      let lx = pos2.getX(i), ly = pos2.getY(i), lz = pos2.getZ(i);
+      const h = getIslandTerrainHeight(lx + 180, lz - 180);
+      pos2.setY(i, ly > 0 ? (h !== null ? h : 5.0) : 0.0);
+    }
+    island2Geo.computeVertexNormals();
+    const island2 = new THREE.Mesh(island2Geo, new THREE.MeshStandardMaterial({ color: 0x221a1a, roughness: 0.85, metalness: 0.2 }));
+    island2.position.set(180, 0, -180);
+    island2.receiveShadow = true;
+    island2Group.add(island2);
+
+    const magma = new THREE.Mesh(new THREE.CircleGeometry(16, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xff3300 }));
+    magma.position.set(180, 12.3, -180);
+    island2Group.add(magma);
+
+    const beach2Geo = new THREE.RingGeometry(44, 74, 48, 8);
+    beach2Geo.rotateX(-Math.PI / 2);
+    const bPos2 = beach2Geo.attributes.position;
+    for (let i = 0; i < bPos2.count; i++) {
+      const h = getIslandTerrainHeight(bPos2.getX(i) + 180, bPos2.getZ(i) - 180);
+      bPos2.setY(i, h !== null ? h : -0.2);
+    }
+    beach2Geo.computeVertexNormals();
+    const beach2 = new THREE.Mesh(beach2Geo, new THREE.MeshStandardMaterial({ color: 0x3d3535, roughness: 0.9, side: THREE.DoubleSide }));
+    beach2.position.set(180, 0, -180);
+    beach2.receiveShadow = true;
+    island2Group.add(beach2);
+
+    const pier2 = new THREE.Mesh(new THREE.BoxGeometry(6, 1, 24), new THREE.MeshStandardMaterial({ color: 0x4a3222 }));
+    pier2.position.set(180, 1.2, -116);
+    pier2.receiveShadow = true;
+    scene.add(pier2);
+
+    const boat2 = new THREE.Mesh(new THREE.BoxGeometry(5, 2, 10), new THREE.MeshStandardMaterial({ color: 0x1e3a8a }));
+    boat2.position.set(180, 0.5, -102);
+    scene.add(boat2);
+    addBoxCollider(180, -102, 2.8, 5.2);
+
+    function createPalmTree(x, z) {
+      const tree = new THREE.Group();
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.8, 8, 8), new THREE.MeshStandardMaterial({ color: 0x7c4f24, roughness: 0.9 }));
+      trunk.position.y = 4;
+      trunk.castShadow = true;
+      tree.add(trunk);
+      for (let i = 0; i < 5; i++) {
+        const leaf = new THREE.Mesh(new THREE.ConeGeometry(2.5, 5, 5), new THREE.MeshStandardMaterial({ color: 0x1fad38, roughness: 0.6 }));
+        leaf.position.y = 8;
+        leaf.rotation.x = 0.9;
+        leaf.rotation.y = (i * Math.PI * 2) / 5;
+        leaf.castShadow = true;
+        tree.add(leaf);
+      }
+      tree.position.set(x, getGroundHeight(x, z) || 9.5, z);
+      scene.add(tree);
+      addCircleCollider(x, z, 1.3);
+    }
+
+    function createVolcanicSpire(x, z) {
+      const spire = new THREE.Mesh(new THREE.ConeGeometry(2.0, 9.0, 6), new THREE.MeshStandardMaterial({ color: 0x1a1111, roughness: 0.9 }));
+      spire.position.set(x, (getGroundHeight(x, z) || 12) + 4.5, z);
+      spire.castShadow = true;
+      scene.add(spire);
+      addCircleCollider(x, z, 2.0);
+    }
+
+    createPalmTree(20, 20);
+    createPalmTree(-25, 15);
+    createPalmTree(15, -28);
+    createPalmTree(-18, -22);
+
+    createVolcanicSpire(155, -165);
+    createVolcanicSpire(205, -195);
+    createVolcanicSpire(165, -205);
+
+    function resolveWorldCollisions(position, entityRadius = 0.7) {
+      for (let i = 0; i < worldColliders.length; i++) {
+        const col = worldColliders[i];
+        if (col.type === 'circle') {
+          const dx = position.x - col.x, dz = position.z - col.z;
+          const dist = Math.hypot(dx, dz);
+          const minDist = col.radius + entityRadius;
+          if (dist < minDist && dist > 0.0001) {
+            const overlap = minDist - dist;
+            position.x += (dx / dist) * overlap;
+            position.z += (dz / dist) * overlap;
+          }
+        } else if (col.type === 'box') {
+          const dx = position.x - col.x, dz = position.z - col.z;
+          const clampX = Math.max(-col.halfX, Math.min(col.halfX, dx));
+          const clampZ = Math.max(-col.halfZ, Math.min(col.halfZ, dz));
+          const nearX = col.x + clampX, nearZ = col.z + clampZ;
+          const distX = position.x - nearX, distZ = position.z - nearZ;
+          const dist = Math.hypot(distX, distZ);
+          if (dist < entityRadius && dist > 0.0001) {
+            const overlap = entityRadius - dist;
+            position.x += (distX / dist) * overlap;
+            position.z += (distZ / dist) * overlap;
+          }
+        }
+      }
+    }
+
+    // セーフゾーン
+    const safeZoneRings = [];
+    gameState.safeZones.forEach(sz => {
+      const ring = new THREE.Mesh(new THREE.RingGeometry(sz.radius - 0.4, sz.radius, 48), new THREE.MeshBasicMaterial({ color: 0x00f0ff, side: THREE.DoubleSide, transparent: true, opacity: 0.65 }));
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.set(sz.x, (getGroundHeight(sz.x, sz.z) || 10) + 0.12, sz.z);
+      scene.add(ring);
+      safeZoneRings.push(ring);
+    });
+
+    function createNPC(x, z, name, hatColor, tentColor) {
+      const group = new THREE.Group();
+      group.position.set(x, getGroundHeight(x, z) || 10, z);
+
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.8, 1.8, 12), new THREE.MeshStandardMaterial({ color: 0x8b5a2b }));
+      body.position.y = 0.9;
+      group.add(body);
+
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.45, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffdfc4 }));
+      head.position.y = 2.1;
+      group.add(head);
+
+      const hat = new THREE.Mesh(new THREE.ConeGeometry(0.9, 0.7, 12), new THREE.MeshStandardMaterial({ color: hatColor }));
+      hat.position.y = 2.65;
+      group.add(hat);
+
+      const tent = new THREE.Mesh(new THREE.ConeGeometry(3.5, 1.8, 6), new THREE.MeshStandardMaterial({ color: tentColor }));
+      tent.position.y = 4.2;
+      group.add(tent);
+
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 64;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#ffbb00';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${name} [Q]`, 128, 40);
+      const sign = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c) }));
+      sign.scale.set(3.5, 0.88, 1);
+      sign.position.y = 3.2;
+      group.add(sign);
+
+      scene.add(group);
+      addCircleCollider(x, z, 1.8);
+      return group;
+    }
+
+    const npc1 = createNPC(gameState.safeZones[0].x, gameState.safeZones[0].z, "商人バルバロ", 0x2244aa, 0xdd2233);
+    const npc2 = createNPC(gameState.safeZones[1].x, gameState.safeZones[1].z, "司令官ロア", 0x991b1b, 0x1f2937);
+
+    // ==========================================
+    // 5. プレイヤーキャラクター ＆ 変身パーツ
+    // ==========================================
+    const playerGroup = new THREE.Group();
+    scene.add(playerGroup);
+
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.5 });
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdfc4, roughness: 0.7 });
+
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.4, 0.7), bodyMat);
+    torso.position.y = 1.8;
+    torso.castShadow = true;
+    playerGroup.add(torso);
+
+    const core = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.2, 16), new THREE.MeshStandardMaterial({ color: 0x00e5ff, metalness: 0.8 }));
+    core.rotation.x = Math.PI / 2;
+    core.position.set(0, 1.9, 0.36);
+    playerGroup.add(core);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.48, 16, 16), skinMat);
+    head.position.y = 2.85;
+    head.castShadow = true;
+    playerGroup.add(head);
+
+    const hair = new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.8, 8), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 }));
+    hair.position.set(0, 3.3, -0.05);
+    hair.rotation.x = -0.2;
+    playerGroup.add(hair);
+
+    const limbMat = new THREE.MeshStandardMaterial({ color: 0x111827 });
+    const leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.1, 0.35), limbMat);
+    leftArm.position.set(-0.85, 1.8, 0);
+    playerGroup.add(leftArm);
+
+    const rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.1, 0.35), limbMat);
+    rightArm.position.set(0.85, 1.8, 0);
+    playerGroup.add(rightArm);
+
+    const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.4), limbMat);
+    leftLeg.position.set(-0.35, 0.6, 0);
+    playerGroup.add(leftLeg);
+
+    const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.4), limbMat);
+    rightLeg.position.set(0.35, 0.6, 0);
+    playerGroup.add(rightLeg);
+
+    const swordGroup = new THREE.Group();
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.4, 0.08), new THREE.MeshStandardMaterial({ color: 0x00ffff, metalness: 0.9 }));
+    blade.position.y = 1.2;
+    blade.castShadow = true;
+    swordGroup.add(blade);
+    const guard = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.15, 0.2), new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.8 }));
+    guard.position.y = 0.1;
+    swordGroup.add(guard);
+    const SWORD_DEFAULT_ROT_X = Math.PI / 4;
+    swordGroup.position.set(0.85, 1.2, 0.3);
+    swordGroup.rotation.x = SWORD_DEFAULT_ROT_X;
+    playerGroup.add(swordGroup);
+
+    // ★ 変身専用3Dパーツ（狐の9本の尾、不死鳥の翼、豹の尾）
+    const transformPartsGroup = new THREE.Group();
+    playerGroup.add(transformPartsGroup);
+
+    // 1. 狐パーツ（9本の光る尾 ＆ 狐耳）
+    const kitsuneGroup = new THREE.Group();
+    for (let i = 0; i < 9; i++) {
+      const tail = new THREE.Mesh(new THREE.ConeGeometry(0.2, 2.2, 6), new THREE.MeshBasicMaterial({ color: 0xf59e0b }));
+      const ang = (i - 4) * 0.22;
+      tail.position.set(Math.sin(ang) * 0.8, 1.2 + Math.abs(ang) * 0.4, -0.4 - Math.cos(ang) * 0.6);
+      tail.rotation.x = -1.2;
+      tail.rotation.y = ang;
+      kitsuneGroup.add(tail);
+    }
+    const ear1 = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.5, 4), new THREE.MeshBasicMaterial({ color: 0xf59e0b }));
+    ear1.position.set(0.28, 3.4, 0);
+    kitsuneGroup.add(ear1);
+    const ear2 = ear1.clone();
+    ear2.position.set(-0.28, 3.4, 0);
+    kitsuneGroup.add(ear2);
+    kitsuneGroup.visible = false;
+    transformPartsGroup.add(kitsuneGroup);
+
+    // 2. 不死鳥パーツ（蒼炎の巨大翼）
+    const phoenixGroup = new THREE.Group();
+    const wingMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.85 });
+    const leftWing = new THREE.Mesh(new THREE.ConeGeometry(0.8, 3.2, 4), wingMat);
+    leftWing.position.set(-1.8, 2.0, -0.2);
+    leftWing.rotation.z = Math.PI / 2.5;
+    phoenixGroup.add(leftWing);
+    const rightWing = new THREE.Mesh(new THREE.ConeGeometry(0.8, 3.2, 4), wingMat);
+    rightWing.position.set(1.8, 2.0, -0.2);
+    rightWing.rotation.z = -Math.PI / 2.5;
+    phoenixGroup.add(rightWing);
+    phoenixGroup.visible = false;
+    transformPartsGroup.add(phoenixGroup);
+
+    // 3. レオパルドパーツ（豹の耳 ＆ しなやかな尾）
+    const leopardGroup = new THREE.Group();
+    const leoMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.6 });
+    const leoTail = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.08, 1.8, 6), leoMat);
+    leoTail.position.set(0, 1.0, -0.6);
+    leoTail.rotation.x = -0.7;
+    leopardGroup.add(leoTail);
+    const lEar1 = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.4, 4), leoMat);
+    lEar1.position.set(0.3, 3.35, 0);
+    leopardGroup.add(lEar1);
+    const lEar2 = lEar1.clone();
+    lEar2.position.set(-0.3, 3.35, 0);
+    leopardGroup.add(lEar2);
+    leopardGroup.visible = false;
+    transformPartsGroup.add(leopardGroup);
+
+    playerGroup.position.copy(gameState.player.spawnPoint);
+
+    // ==========================================
+    // 6. 敵 ＆ ★それぞれの島のボスキャラクター
+    // ==========================================
+    const enemies = [];
+    const enemyMatLow = new THREE.MeshStandardMaterial({ color: 0x8b0000, roughness: 0.4 });
+    const enemyMatHigh = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3, metalness: 0.8 });
+    const bossMatGold = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.2, metalness: 0.9 }); // アイアンハート黄金装甲
+    const bossMatTitan = new THREE.MeshStandardMaterial({ color: 0x450a0a, roughness: 0.4 }); // ヴォルカノ・タイタン
+
+    function createEnemy(x, z, name, lv, maxHp, atkPower, goldReward, expReward, fruitExpReward, isHighTier = false, isBoss = false) {
+      const group = new THREE.Group();
+      const scale = isBoss ? (lv >= 15 ? 2.3 : 1.8) : 1.0;
+      group.scale.set(scale, scale, scale);
+
+      let bodyMatSelected = isHighTier ? enemyMatHigh : enemyMatLow;
+      if (isBoss) bodyMatSelected = (lv >= 15) ? bossMatTitan : bossMatGold;
+
+      const eBody = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.6, 0.8), bodyMatSelected);
+      eBody.position.y = 1.8;
+      eBody.castShadow = true;
+      group.add(eBody);
+
+      if (isBoss) {
+        // ボス専用の巨大な角や王冠
+        const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.55, 0.4, 6), new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.9 }));
+        crown.position.y = 3.5;
+        group.add(crown);
+      }
+
+      const eHead = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), bodyMatSelected);
+      eHead.position.y = 2.85;
+      group.add(eHead);
+
+      const horn1 = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.7, 6), new THREE.MeshStandardMaterial({ color: isBoss ? 0xff0000 : (isHighTier ? 0xff4400 : 0xff2200) }));
+      horn1.position.set(0.3, 3.3, 0);
+      horn1.rotation.z = -0.4;
+      group.add(horn1);
+      const horn2 = horn1.clone();
+      horn2.position.set(-0.3, 3.3, 0);
+      horn2.rotation.z = 0.4;
+      group.add(horn2);
+
+      // 通常頭上HPバー
+      const hpBarBg = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.22), new THREE.MeshBasicMaterial({ color: 0x222222 }));
+      hpBarBg.position.y = 4.0;
+      group.add(hpBarBg);
+
+      const hpBarFill = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.16), new THREE.MeshBasicMaterial({ color: isBoss ? 0xff0022 : (isHighTier ? 0xff0044 : 0xff2244) }));
+      hpBarFill.position.set(0, 4.0, 0.01);
+      group.add(hpBarFill);
+
+      const startY = getGroundHeight(x, z) || 10;
+      group.position.set(x, startY, z);
+      scene.add(group);
+
+      const enemyData = {
+        group,
+        hpBarBg,
+        hpBarFill,
+        name,
+        level: lv,
+        hp: maxHp,
+        maxHp: maxHp,
+        attackPower: atkPower,
+        goldReward,
+        expReward,
+        fruitExpReward,
+        isBoss,
+        speed: isBoss ? 4.8 : (isHighTier ? 6.5 : 5.5),
+        basePos: new THREE.Vector3(x, startY, z),
+        aiState: 'IDLE',
+        respawnTimer: 0,
+        attackCooldown: 0,
+        velocity: new THREE.Vector3(),
+        freezeTimer: 0
+      };
+      enemies.push(enemyData);
+      return enemyData;
+    }
+
+    // --- ドーン島 (雑兵 ＆ ★ボス) ---
+    createEnemy(16, 10, "野盗スカウト", 1, 80, 12, 30, 35, 25, false, false);
+    createEnemy(-18, -12, "野盗ファイター", 2, 90, 15, 40, 45, 30, false, false);
+    createEnemy(8, -25, "野盗ベルセルク", 3, 110, 18, 50, 60, 35, false, false);
+    // ★ ドーン島ボス：キャプテン・アイアンハート
+    const boss1 = createEnemy(-20, -20, "海賊船長 アイアンハート", 6, 600, 26, 350, 450, 180, true, true);
+
+    // --- カルデラ火山島 (雑兵 ＆ ★ボス) ---
+    createEnemy(165, -170, "溶岩の略奪兵", 8, 180, 24, 70, 80, 45, true, false);
+    createEnemy(195, -165, "ヴォルカノ・ナイト", 10, 240, 32, 95, 120, 60, true, false);
+    createEnemy(180, -205, "海賊副船長", 12, 350, 42, 150, 200, 85, true, false);
+    // ★ カルデラ火山島ボス：ヴォルカノ・タイタン
+    const boss2 = createEnemy(180, -180, "炎獄の破壊神 ヴォルカノ・タイタン", 16, 1600, 52, 900, 1400, 450, true, true);
+
+    // ==========================================
+    // 7. 変身処理 ＆ パーティクル・全スキル
+    // ==========================================
+    const particles = [];
+    const projectiles = [];
+    const MAX_PARTICLES = 140;
+
+    function addParticle(mesh, velocity, life) {
+      if (particles.length >= MAX_PARTICLES) {
+        const old = particles.shift();
+        scene.remove(old.mesh);
+      }
+      particles.push({ mesh, velocity, life, maxLife: life });
+      scene.add(mesh);
+    }
+
+    function spawnSlashEffect(position, direction, isKitsune = false) {
+      for (let i = 0; i < 16; i++) {
+        const p = new THREE.Mesh(new THREE.SphereGeometry(0.14, 6, 6), new THREE.MeshBasicMaterial({ color: isKitsune ? 0xf59e0b : 0x00ffff, transparent: true, opacity: 1 }));
+        p.position.copy(position).add(new THREE.Vector3(0, 1.5, 0));
+        const spread = (Math.random() - 0.5) * 1.5;
+        const vel = direction.clone().multiplyScalar(10).add(new THREE.Vector3(spread, Math.random() * 2, spread));
+        addParticle(p, vel, 0.35);
+      }
+    }
+
+    function spawnFireTrail(pos, count = 10, colorHex = 0xff4400) {
+      for (let i = 0; i < count; i++) {
+        const p = new THREE.Mesh(new THREE.DodecahedronGeometry(0.3), new THREE.MeshBasicMaterial({ color: colorHex }));
+        p.position.copy(pos);
+        const vel = new THREE.Vector3((Math.random() - 0.5) * 4, Math.random() * 3, (Math.random() - 0.5) * 4);
+        addParticle(p, vel, 0.4);
+      }
+    }
+
+    function spawnHealParticles(pos) {
+      for (let i = 0; i < 8; i++) {
+        const p = new THREE.Mesh(new THREE.DodecahedronGeometry(0.22), new THREE.MeshBasicMaterial({ color: 0x10b981 }));
+        p.position.copy(pos).add(new THREE.Vector3((Math.random() - 0.5) * 1.4, Math.random() * 0.9, (Math.random() - 0.5) * 1.4));
+        const vel = new THREE.Vector3(0, 2.5 + Math.random() * 2, 0);
+        addParticle(p, vel, 0.5);
+      }
+    }
+
+    // ★ ゾオン系変身（トランスフォーム）の発動
+    function activateTransformation(type) {
+      const p = gameState.player;
+      p.transform.active = true;
+      p.transform.type = type;
+      p.transform.timer = p.transform.maxDuration;
+
+      // 見た目パーツ切り替え
+      kitsuneGroup.visible = (type === 'kitsune');
+      phoenixGroup.visible = (type === 'phoenix');
+      leopardGroup.visible = (type === 'leopard');
+
+      // 基礎ステータス強化
+      if (type === 'kitsune') {
+        p.speed = p.baseSpeed * 1.65; // 速度+65%
+        p.attackPower = p.baseAttackPower * 2.0; // 攻撃力+100%
+        showDamagePopup("🦊 九尾変身！(神速・超火力)", playerGroup.position, true);
+      } else if (type === 'phoenix') {
+        p.speed = p.baseSpeed * 1.35;
+        p.attackPower = p.baseAttackPower * 1.7; // 攻撃力+70%
+        showDamagePopup("🦅 蒼蓮不死鳥！(常時再生・鉄壁)", playerGroup.position, true);
+      } else if (type === 'leopard') {
+        p.speed = p.baseSpeed * 1.5;
+        p.attackPower = p.baseAttackPower * 2.3; // 攻撃力+130%（超火力）
+        showDamagePopup("🐆 豹獣人化！(猛獣覚醒・剛撃)", playerGroup.position, true);
+      }
+
+      document.getElementById('transform-badge').style.display = 'flex';
+      const ann = document.getElementById('announcement');
+      ann.innerHTML = `変身覚醒！<br><span style="font-size:24px; color:#ffedd5;">${FRUIT_DATABASE[type].name}</span>`;
+      ann.style.opacity = '1';
+      setTimeout(() => ann.style.opacity = '0', 2000);
+    }
+
+    function deactivateTransformation() {
+      const p = gameState.player;
+      p.transform.active = false;
+      p.transform.type = null;
+      p.transform.timer = 0;
+
+      kitsuneGroup.visible = false;
+      phoenixGroup.visible = false;
+      leopardGroup.visible = false;
+
+      // 基礎ステータス復帰
+      p.speed = p.baseSpeed;
+      p.attackPower = p.baseAttackPower;
+      document.getElementById('transform-badge').style.display = 'none';
+    }
+
+    // スキル発動ロジック
+    function triggerFruitSkill(slotIndex) {
+      const fruitId = gameState.player.currentFruit;
+      if (!fruitId) {
+        showDamagePopup("実を食べて能力を解放してください！", playerGroup.position);
+        return;
+      }
+
+      const mastery = gameState.fruitMastery[fruitId];
+      const reqLevel = SKILL_UNLOCK_LEVELS[slotIndex];
+
+      if (mastery.level < reqLevel) {
+        showDamagePopup(`実Lv.${reqLevel}で解放されます！`, playerGroup.position);
+        return;
+      }
+
+      if (gameState.player.skillCooldowns[slotIndex] > 0) return;
+
+      gameState.player.lastCombatTime = clock.getElapsedTime();
+
+      const fruit = FRUIT_DATABASE[fruitId];
+      const skillDef = fruit.skills[slotIndex];
+      gameState.player.skillCooldowns[slotIndex] = skillDef.cd;
+
+      const fwd = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), playerGroup.rotation.y);
+      addFruitExp(10);
+
+      // --- 炎帝の実 ---
+      if (fruitId === 'flame') {
+        if (slotIndex === 0) {
+          const pMesh = new THREE.Mesh(new THREE.SphereGeometry(0.7, 12, 12), new THREE.MeshBasicMaterial({ color: 0xff3300, wireframe: true }));
+          pMesh.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.8, 0)).add(fwd.clone().multiplyScalar(1.5));
+          scene.add(pMesh);
+          projectiles.push({ mesh: pMesh, direction: fwd, speed: 28, life: 2.0, damage: 55, type: 'flame' });
+        } else if (slotIndex === 1) {
+          const colPos = playerGroup.position.clone().add(fwd.clone().multiplyScalar(5));
+          colPos.y = (getGroundHeight(colPos.x, colPos.z) || 10);
+          const pillar = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 3.5, 25, 12), new THREE.MeshBasicMaterial({ color: 0xff5500, transparent: true, opacity: 0.85 }));
+          pillar.position.set(colPos.x, colPos.y + 12.5, colPos.z);
+          scene.add(pillar);
+          setTimeout(() => scene.remove(pillar), 400);
+
+          enemies.forEach(e => {
+            if (e.aiState !== 'DEAD' && e.group.position.distanceTo(colPos) < 7.0) {
+              applyDamageToEnemy(e, 75, true, colPos);
+              addFruitExp(12);
+            }
+          });
+          spawnFireTrail(colPos, 24);
+        } else if (slotIndex === 2) {
+          playerPhysics.velocity.add(fwd.clone().multiplyScalar(30));
+          playerPhysics.velocity.y = 8;
+          resolveWorldCollisions(playerGroup.position, 0.7);
+          spawnFireTrail(playerGroup.position, 20);
+        } else if (slotIndex === 3) {
+          const sunPos = playerGroup.position.clone().add(new THREE.Vector3(0, 7, 0)).add(fwd.clone().multiplyScalar(4));
+          const sun = new THREE.Mesh(new THREE.SphereGeometry(3.5, 16, 16), new THREE.MeshBasicMaterial({ color: 0xff2200 }));
+          sun.position.copy(sunPos);
+          scene.add(sun);
+
+          setTimeout(() => {
+            scene.remove(sun);
+            const blastPos = playerGroup.position.clone().add(fwd.clone().multiplyScalar(14));
+            blastPos.y = (getGroundHeight(blastPos.x, blastPos.z) || 10);
+            for (let i = 0; i < 45; i++) {
+              const p = new THREE.Mesh(new THREE.DodecahedronGeometry(0.6), new THREE.MeshBasicMaterial({ color: Math.random() > 0.4 ? 0xff3300 : 0xffcc00 }));
+              p.position.copy(blastPos);
+              const vel = new THREE.Vector3((Math.random() - 0.5) * 22, Math.random() * 18, (Math.random() - 0.5) * 22);
+              addParticle(p, vel, 0.8);
+            }
+            enemies.forEach(e => {
+              if (e.aiState !== 'DEAD' && e.group.position.distanceTo(blastPos) < 14.0) {
+                applyDamageToEnemy(e, 160, true, blastPos);
+                addFruitExp(25);
+              }
+            });
+          }, 350);
+        }
+      }
+      // --- 雷鳴の実 ---
+      else if (fruitId === 'thunder') {
+        if (slotIndex === 0) {
+          const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 20, 8), new THREE.MeshBasicMaterial({ color: 0xdd77ff }));
+          beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), fwd);
+          beam.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.8, 0)).add(fwd.clone().multiplyScalar(10));
+          scene.add(beam);
+          setTimeout(() => scene.remove(beam), 150);
+
+          enemies.forEach(e => {
+            if (e.aiState !== 'DEAD') {
+              const toE = e.group.position.clone().sub(playerGroup.position);
+              if (toE.length() < 20 && fwd.angleTo(toE.normalize()) < 0.4) {
+                applyDamageToEnemy(e, 50, true);
+                addFruitExp(12);
+              }
+            }
+          });
+        } else if (slotIndex === 1) {
+          const tBird = new THREE.Mesh(new THREE.ConeGeometry(0.8, 2.2, 5), new THREE.MeshBasicMaterial({ color: 0x00ffff }));
+          tBird.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), fwd);
+          tBird.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.8, 0));
+          scene.add(tBird);
+          projectiles.push({ mesh: tBird, direction: fwd, speed: 22, life: 1.5, damage: 65, type: 'thunder_stun' });
+        } else if (slotIndex === 2) {
+          const target = playerGroup.position.clone().add(fwd.clone().multiplyScalar(18));
+          const tGround = getGroundHeight(target.x, target.z);
+          if (tGround !== null) {
+            target.y = tGround;
+            playerGroup.position.copy(target);
+            resolveWorldCollisions(playerGroup.position, 0.7);
+            showDamagePopup("⚡ 瞬雷!", playerGroup.position, true);
+          }
+        } else if (slotIndex === 3) {
+          for (let k = 0; k < 6; k++) {
+            setTimeout(() => {
+              const rx = playerGroup.position.x + (Math.random() - 0.5) * 22;
+              const rz = playerGroup.position.z + (Math.random() - 0.5) * 22;
+              const ry = (getGroundHeight(rx, rz) || 10);
+              const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 1.4, 30, 8), new THREE.MeshBasicMaterial({ color: 0xaa44ff }));
+              bolt.position.set(rx, ry + 15, rz);
+              scene.add(bolt);
+              setTimeout(() => scene.remove(bolt), 200);
+
+              enemies.forEach(e => {
+                if (e.aiState !== 'DEAD' && e.group.position.distanceTo(new THREE.Vector3(rx, ry, rz)) < 6.5) {
+                  applyDamageToEnemy(e, 85, true);
+                  e.freezeTimer = 2.0;
+                  addFruitExp(20);
+                }
+              });
+            }, k * 180);
+          }
+        }
+      }
+      // --- 氷結の実 ---
+      else if (fruitId === 'ice') {
+        if (slotIndex === 0) {
+          [-0.25, 0, 0.25].forEach(ang => {
+            const spreadFwd = fwd.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), ang);
+            const iceTrident = new THREE.Mesh(new THREE.ConeGeometry(0.3, 2.0, 6), new THREE.MeshBasicMaterial({ color: 0x88eeff }));
+            iceTrident.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), spreadFwd);
+            iceTrident.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.8, 0));
+            scene.add(iceTrident);
+            projectiles.push({ mesh: iceTrident, direction: spreadFwd, speed: 25, life: 1.8, damage: 45, type: 'ice' });
+          });
+        } else if (slotIndex === 1) {
+          enemies.forEach(e => {
+            if (e.aiState !== 'DEAD' && e.group.position.distanceTo(playerGroup.position) < 16.0) {
+              e.freezeTimer = 3.5;
+              showDamagePopup("❄️ 凍結拘束!", e.group.position, true);
+              applyDamageToEnemy(e, 40, false);
+              addFruitExp(15);
+            }
+          });
+        } else if (slotIndex === 2) {
+          playerPhysics.velocity.add(fwd.clone().multiplyScalar(26));
+          resolveWorldCollisions(playerGroup.position, 0.7);
+          showDamagePopup("⛸️ 滑走!", playerGroup.position);
+        } else if (slotIndex === 3) {
+          const pCenter = playerGroup.position.clone();
+          for (let i = 0; i < 40; i++) {
+            const dist = 3 + Math.random() * 14;
+            const ang = Math.random() * Math.PI * 2;
+            const ix = pCenter.x + Math.cos(ang) * dist;
+            const iz = pCenter.z + Math.sin(ang) * dist;
+            const iy = (getGroundHeight(ix, iz) || 10);
+
+            const pillar = new THREE.Mesh(new THREE.ConeGeometry(0.6 + Math.random() * 0.4, 4 + Math.random() * 4, 5), new THREE.MeshBasicMaterial({ color: 0xbbf7ff, transparent: true, opacity: 0.9 }));
+            pillar.position.set(ix, iy + 2, iz);
+            scene.add(pillar);
+            setTimeout(() => scene.remove(pillar), 1400);
+          }
+
+          enemies.forEach(e => {
+            if (e.aiState !== 'DEAD' && e.group.position.distanceTo(pCenter) < 18.0) {
+              applyDamageToEnemy(e, 170, true, pCenter);
+              e.freezeTimer = 4.0;
+              addFruitExp(30);
+            }
+          });
+        }
+      }
+      // ★ 狐の実（Kitsune）
+      else if (fruitId === 'kitsune') {
+        if (slotIndex === 0) {
+          // 狐火弾
+          const pMesh = new THREE.Mesh(new THREE.DodecahedronGeometry(0.6), new THREE.MeshBasicMaterial({ color: 0xf59e0b }));
+          pMesh.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.8, 0)).add(fwd.clone().multiplyScalar(1.5));
+          scene.add(pMesh);
+          projectiles.push({ mesh: pMesh, direction: fwd, speed: 30, life: 2.0, damage: 60, type: 'kitsune' });
+        } else if (slotIndex === 1) {
+          // 狐影滅殺
+          for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+              spawnSlashEffect(playerGroup.position.clone().add(fwd.clone().multiplyScalar(i * 1.5)), fwd, true);
+            }, i * 60);
+          }
+          enemies.forEach(e => {
+            if (e.aiState !== 'DEAD' && e.group.position.distanceTo(playerGroup.position) < 8.0) {
+              applyDamageToEnemy(e, 85, true);
+              addFruitExp(15);
+            }
+          });
+        } else if (slotIndex === 2) {
+          // 神速歩
+          playerPhysics.velocity.add(fwd.clone().multiplyScalar(34));
+          resolveWorldCollisions(playerGroup.position, 0.7);
+          spawnFireTrail(playerGroup.position, 16, 0xf59e0b);
+        } else if (slotIndex === 3) {
+          // ★ 変身技：九尾変身
+          activateTransformation('kitsune');
+        }
+      }
+      // ★ 不死鳥の実（Phoenix）
+      else if (fruitId === 'phoenix') {
+        if (slotIndex === 0) {
+          const pMesh = new THREE.Mesh(new THREE.SphereGeometry(0.7, 8, 8), new THREE.MeshBasicMaterial({ color: 0x06b6d4 }));
+          pMesh.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.8, 0)).add(fwd.clone().multiplyScalar(1.5));
+          scene.add(pMesh);
+          projectiles.push({ mesh: pMesh, direction: fwd, speed: 28, life: 2.0, damage: 55, type: 'phoenix' });
+        } else if (slotIndex === 1) {
+          // 再生の大炎 (HP40%超回復 ＋ 周囲ダメージ)
+          const healVal = Math.ceil(gameState.player.maxHp * 0.40);
+          gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + healVal);
+          document.getElementById('hp-bar').style.width = `${(gameState.player.hp / gameState.player.maxHp) * 100}%`;
+          showDamagePopup(`+${healVal} HP 💙`, playerGroup.position, false, false, true);
+          spawnHealParticles(playerGroup.position);
+
+          enemies.forEach(e => {
+            if (e.aiState !== 'DEAD' && e.group.position.distanceTo(playerGroup.position) < 9.0) {
+              applyDamageToEnemy(e, 65, true);
+            }
+          });
+        } else if (slotIndex === 2) {
+          // 飛翔翼（大ジャンプ＆長距離滑空）
+          playerPhysics.velocity.add(fwd.clone().multiplyScalar(28));
+          playerPhysics.velocity.y = 14; // 高く飛ぶ
+          spawnFireTrail(playerGroup.position, 16, 0x06b6d4);
+        } else if (slotIndex === 3) {
+          // ★ 変身技：青蓮不死鳥
+          activateTransformation('phoenix');
+        }
+      }
+      // ★ レオパルドの実（Leopard）
+      else if (fruitId === 'leopard') {
+        if (slotIndex === 0) {
+          for (let i = 0; i < 4; i++) {
+            setTimeout(() => {
+              const sp = fwd.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), (Math.random() - 0.5) * 0.2);
+              spawnSlashEffect(playerGroup.position, sp, true);
+              enemies.forEach(e => {
+                if (e.aiState !== 'DEAD' && e.group.position.distanceTo(playerGroup.position) < 6.0) {
+                  applyDamageToEnemy(e, 22, false);
+                }
+              });
+            }, i * 70);
+          }
+        } else if (slotIndex === 1) {
+          // 獣王咆哮（大ノックバックスタン）
+          enemies.forEach(e => {
+            if (e.aiState !== 'DEAD' && e.group.position.distanceTo(playerGroup.position) < 11.0) {
+              applyDamageToEnemy(e, 70, true, playerGroup.position);
+              e.freezeTimer = 2.0;
+            }
+          });
+          spawnFireTrail(playerGroup.position, 25, 0xeab308);
+        } else if (slotIndex === 2) {
+          // 野性跳躍
+          playerPhysics.velocity.add(fwd.clone().multiplyScalar(32));
+          playerPhysics.velocity.y = 7;
+          resolveWorldCollisions(playerGroup.position, 0.7);
+        } else if (slotIndex === 3) {
+          // ★ 変身技：豹獣人化
+          activateTransformation('leopard');
+        }
+      }
+    }
+
+    function addFruitExp(amount) {
+      const fruitId = gameState.player.currentFruit;
+      if (!fruitId) return;
+
+      const m = gameState.fruitMastery[fruitId];
+      m.exp += amount;
+
+      if (m.exp >= m.maxExp) {
+        m.exp -= m.maxExp;
+        m.level++;
+        m.maxExp = Math.floor(m.maxExp * 1.45);
+
+        const f = FRUIT_DATABASE[fruitId];
+        const ann = document.getElementById('announcement');
+        ann.innerHTML = `${f.name}<br><span style="font-size:24px; color:#c084fc;">実 Lv. ${m.level} UP!</span>`;
+        ann.style.color = f.color;
+        ann.style.opacity = '1';
+        setTimeout(() => ann.style.opacity = '0', 2000);
+
+        SKILL_UNLOCK_LEVELS.forEach((reqLv, idx) => {
+          if (m.level === reqLv && idx > 0) {
+            setTimeout(() => {
+              showDamagePopup(`✨ 新スキル [${f.skills[idx].key}] ${f.skills[idx].name} 解放!`, playerGroup.position, true);
+            }, 600);
+          }
+        });
+      }
+
+      updateFruitHotbarUI();
+    }
+
+    function updateFruitHotbarUI() {
+      const fruitId = gameState.player.currentFruit;
+      const fruitTxt = document.getElementById('current-fruit-txt');
+      const fruitLvTxt = document.getElementById('fruit-level-txt');
+      const fruitExpBar = document.getElementById('fruit-exp-bar');
+
+      const slots = [
+        { slot: document.getElementById('slot-z'), name: document.getElementById('name-z'), req: document.getElementById('req-z') },
+        { slot: document.getElementById('slot-x'), name: document.getElementById('name-x'), req: document.getElementById('req-x') },
+        { slot: document.getElementById('slot-c'), name: document.getElementById('name-c'), req: document.getElementById('req-c') },
+        { slot: document.getElementById('slot-v'), name: document.getElementById('name-v'), req: document.getElementById('req-v') }
+      ];
+
+      if (!fruitId) {
+        gameState.player.skillCooldowns = [0, 0, 0, 0];
+        ['cd-z', 'cd-x', 'cd-c', 'cd-v'].forEach(id => {
+          document.getElementById(id).style.height = '0%';
+        });
+
+        fruitTxt.innerText = "無能力 (素手/剣)";
+        fruitTxt.style.color = "#aaa";
+        fruitLvTxt.innerText = "実 Lv. 0";
+        fruitExpBar.style.width = '0%';
+
+        slots.forEach(s => {
+          s.slot.classList.add('locked');
+          s.slot.style.borderColor = "rgba(255, 255, 255, 0.25)";
+          s.name.innerText = "未習得";
+          s.req.innerText = "--";
+        });
+        return;
+      }
+
+      const fData = FRUIT_DATABASE[fruitId];
+      const mData = gameState.fruitMastery[fruitId];
+
+      fruitTxt.innerText = `${fData.name}`;
+      fruitTxt.style.color = fData.color;
+      fruitLvTxt.innerText = `実 Lv. ${mData.level}`;
+      fruitExpBar.style.width = `${(mData.exp / mData.maxExp) * 100}%`;
+
+      slots.forEach((s, idx) => {
+        const reqLv = SKILL_UNLOCK_LEVELS[idx];
+        const isUnlocked = mData.level >= reqLv;
+
+        if (isUnlocked) {
+          s.slot.classList.remove('locked');
+          s.slot.style.borderColor = fData.color;
+          s.name.innerText = fData.skills[idx].name;
+          s.req.innerText = `OK`;
+          s.req.style.color = "#00ffcc";
+        } else {
+          s.slot.classList.add('locked');
+          s.slot.style.borderColor = "rgba(255, 255, 255, 0.15)";
+          s.name.innerText = fData.skills[idx].name;
+          s.req.innerText = `Lv.${reqLv}`;
+          s.req.style.color = "#ff4444";
+        }
+      });
+    }
+
+    // ==========================================
+    // 8. バッグ（インベントリ）処理
+    // ==========================================
+    const modal = document.getElementById('merchant-modal');
+    const bagModal = document.getElementById('bag-modal');
+    const bagFruitList = document.getElementById('bag-fruit-list');
+
+    function renderBagItems() {
+      bagFruitList.innerHTML = '';
+      if (gameState.player.inventory.length === 0) {
+        bagFruitList.innerHTML = '<div style="color:#aaa; font-size:12px; padding:10px 0;">鞄に実はありません。商人から購入してください。</div>';
+        return;
+      }
+
+      gameState.player.inventory.forEach((fruitId, idx) => {
+        const f = FRUIT_DATABASE[fruitId];
+        const m = gameState.fruitMastery[fruitId];
+        const row = document.createElement('div');
+        row.className = 'fruit-item';
+        row.innerHTML = `
+          <div class="fruit-info">
+            <span class="fruit-name" style="color:${f.color};">${f.name} <span style="font-size:11px; color:#c084fc;">(現在の実Lv. ${m.level})</span></span>
+            <span class="fruit-desc">${f.skills.map((s, sIdx) => `[${s.key}] ${s.name}(Lv.${SKILL_UNLOCK_LEVELS[sIdx]})`).join(' | ')}</span>
+          </div>
+          <button class="btn-action btn-eat" data-idx="${idx}">食べる</button>
+        `;
+        bagFruitList.appendChild(row);
+      });
+
+      bagFruitList.querySelectorAll('.btn-eat').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = parseInt(e.target.getAttribute('data-idx'));
+          eatFruitFromBag(idx);
+        });
+      });
+    }
+
+    function eatFruitFromBag(itemIndex) {
+      // 変身をリセット
+      deactivateTransformation();
+
+      const fruitId = gameState.player.inventory[itemIndex];
+      gameState.player.inventory.splice(itemIndex, 1);
+      gameState.player.currentFruit = fruitId;
+      gameState.player.skillCooldowns = [0, 0, 0, 0];
+      ['cd-z', 'cd-x', 'cd-c', 'cd-v'].forEach(id => {
+        document.getElementById(id).style.height = '0%';
+      });
+
+      bagModal.style.display = 'none';
+      updateFruitHotbarUI();
+
+      const f = FRUIT_DATABASE[fruitId];
+      const m = gameState.fruitMastery[fruitId];
+      const ann = document.getElementById('announcement');
+      ann.innerHTML = `${f.name} 覚醒！<br><span style="font-size:22px; color:#c084fc;">実 Lv. ${m.level}</span>`;
+      ann.style.color = f.color;
+      ann.style.opacity = '1';
+      setTimeout(() => ann.style.opacity = '0', 2000);
+
+      for (let i = 0; i < 35; i++) {
+        const p = new THREE.Mesh(new THREE.DodecahedronGeometry(0.3), new THREE.MeshBasicMaterial({ color: f.color }));
+        p.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1, 0));
+        const vel = new THREE.Vector3((Math.random() - 0.5) * 8, Math.random() * 8, (Math.random() - 0.5) * 8);
+        addParticle(p, vel, 0.7);
+      }
+    }
+
+    document.getElementById('btn-open-bag').addEventListener('click', () => {
+      renderBagItems();
+      bagModal.style.display = 'block';
+    });
+    document.getElementById('bag-close-btn').addEventListener('click', () => {
+      bagModal.style.display = 'none';
+    });
+
+    // ==========================================
+    // 9. 入力処理（PC & スマホ統合）
+    // ==========================================
+    const keys = {};
+    const mouse = {
+      isRightDown: false,
+      isLeftDown: false,
+      leftStartX: 0,
+      leftStartY: 0,
+      prevX: 0,
+      prevY: 0,
+      theta: Math.PI,
+      phi: 0.35,
+      distance: 9
+    };
+
+    const touchInput = {
+      moveX: 0,
+      moveZ: 0,
+      joystickActive: false,
+      joystickPointerId: null,
+      cameraPointerId: null,
+      camPrevX: 0,
+      camPrevY: 0
+    };
+
+    window.addEventListener('keydown', (e) => {
+      if (modal.style.display === 'block' || bagModal.style.display === 'block') {
+        if (e.code === 'Escape' || e.code === 'KeyB' || e.code === 'KeyQ') {
+          modal.style.display = 'none';
+          bagModal.style.display = 'none';
+        }
+        return;
+      }
+
+      keys[e.code] = true;
+      if (e.code === 'KeyZ') triggerFruitSkill(0);
+      if (e.code === 'KeyX') triggerFruitSkill(1);
+      if (e.code === 'KeyC') triggerFruitSkill(2);
+      if (e.code === 'KeyV') triggerFruitSkill(3);
+      if (e.code === 'KeyB') {
+        renderBagItems();
+        bagModal.style.display = 'block';
+      }
+      if (e.code === 'KeyQ') interactWithNearestNPC();
+      if (e.code === 'KeyT') travelBoat();
+      if (e.code === 'Space') jumpPlayer();
+    });
+    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+    window.addEventListener('mousedown', (e) => {
+      if (e.target.closest('#ui-layer, #mobile-controls, .game-modal')) return;
+      if (e.button === 2) {
+        mouse.isRightDown = true;
+        mouse.prevX = e.clientX;
+        mouse.prevY = e.clientY;
+      } else if (e.button === 0) {
+        mouse.isLeftDown = true;
+        mouse.leftStartX = e.clientX;
+        mouse.leftStartY = e.clientY;
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (mouse.isRightDown) {
+        const dx = e.clientX - mouse.prevX;
+        const dy = e.clientY - mouse.prevY;
+        rotateCamera(dx, dy);
+        mouse.prevX = e.clientX;
+        mouse.prevY = e.clientY;
+      }
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (e.button === 2) {
+        mouse.isRightDown = false;
+      } else if (e.button === 0) {
+        if (mouse.isLeftDown) {
+          mouse.isLeftDown = false;
+          if (Math.hypot(e.clientX - mouse.leftStartX, e.clientY - mouse.leftStartY) < 6) {
+            attackNormal();
+          }
+        }
+      }
+    });
+
+    window.addEventListener('contextmenu', (e) => e.preventDefault());
+    window.addEventListener('wheel', (e) => {
+      mouse.distance = Math.max(4, Math.min(24, mouse.distance + e.deltaY * 0.015));
+    });
+
+    function rotateCamera(dx, dy) {
+      mouse.theta -= dx * 0.007;
+      mouse.phi = Math.max(0.08, Math.min(Math.PI / 2.2, mouse.phi - dy * 0.007));
+    }
+
+    const joystickZone = document.getElementById('joystick-zone');
+    const joystickThumb = document.getElementById('joystick-thumb');
+    const joystickMaxDist = 45;
+
+    joystickZone.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      touchInput.joystickActive = true;
+      touchInput.joystickPointerId = e.pointerId;
+      try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+      updateJoystickPosition(e.clientX, e.clientY);
+    });
+
+    window.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse') return;
+      if (e.target.closest('#ui-layer, #mobile-controls, .game-modal')) return;
+
+      if (e.clientX > window.innerWidth * 0.35 && touchInput.cameraPointerId === null) {
+        touchInput.cameraPointerId = e.pointerId;
+        touchInput.camPrevX = e.clientX;
+        touchInput.camPrevY = e.clientY;
+        try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+      }
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'mouse') return;
+
+      if (touchInput.joystickActive && e.pointerId === touchInput.joystickPointerId) {
+        updateJoystickPosition(e.clientX, e.clientY);
+      } else if (e.pointerId === touchInput.cameraPointerId) {
+        const dx = e.clientX - touchInput.camPrevX;
+        const dy = e.clientY - touchInput.camPrevY;
+        rotateCamera(dx, dy);
+        touchInput.camPrevX = e.clientX;
+        touchInput.camPrevY = e.clientY;
+      }
+    });
+
+    function resetJoystick() {
+      touchInput.joystickActive = false;
+      touchInput.joystickPointerId = null;
+      touchInput.moveX = 0;
+      touchInput.moveZ = 0;
+      joystickThumb.style.transform = `translate(0px, 0px)`;
+    }
+
+    function resetTouch(e) {
+      if (e.pointerId === touchInput.joystickPointerId) resetJoystick();
+      if (e.pointerId === touchInput.cameraPointerId) touchInput.cameraPointerId = null;
+    }
+
+    window.addEventListener('pointerup', resetTouch);
+    window.addEventListener('pointercancel', resetTouch);
+    window.addEventListener('blur', () => {
+      resetJoystick();
+      touchInput.cameraPointerId = null;
+      mouse.isRightDown = false;
+      mouse.isLeftDown = false;
+      for (const k in keys) keys[k] = false;
+    });
+
+    function updateJoystickPosition(clientX, clientY) {
+      const rect = joystickZone.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      let dx = clientX - centerX;
+      let dy = clientY - centerY;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist > joystickMaxDist) {
+        dx = (dx / dist) * joystickMaxDist;
+        dy = (dy / dist) * joystickMaxDist;
+      }
+
+      joystickThumb.style.transform = `translate(${dx}px, ${dy}px)`;
+      touchInput.moveX = dx / joystickMaxDist;
+      touchInput.moveZ = -(dy / joystickMaxDist);
+    }
+
+    document.getElementById('btn-attack').addEventListener('pointerdown', (e) => { e.stopPropagation(); attackNormal(); });
+    document.getElementById('slot-z').addEventListener('pointerdown', (e) => { e.stopPropagation(); triggerFruitSkill(0); });
+    document.getElementById('slot-x').addEventListener('pointerdown', (e) => { e.stopPropagation(); triggerFruitSkill(1); });
+    document.getElementById('slot-c').addEventListener('pointerdown', (e) => { e.stopPropagation(); triggerFruitSkill(2); });
+    document.getElementById('slot-v').addEventListener('pointerdown', (e) => { e.stopPropagation(); triggerFruitSkill(3); });
+    document.getElementById('btn-mobile-jump').addEventListener('pointerdown', (e) => { e.stopPropagation(); jumpPlayer(); });
+    document.getElementById('interact-prompt').addEventListener('pointerdown', (e) => { e.stopPropagation(); interactWithNearestNPC(); });
+    document.getElementById('boat-prompt').addEventListener('pointerdown', (e) => { e.stopPropagation(); travelBoat(); });
+
+    // ==========================================
+    // 10. 戦闘・物理・航海処理
+    // ==========================================
+    const playerPhysics = {
+      velocity: new THREE.Vector3(),
+      isGrounded: true,
+      gravity: -34,
+      jumpForce: 13
+    };
+
+    function jumpPlayer() {
+      if (playerPhysics.isGrounded) {
+        playerPhysics.velocity.y = playerPhysics.jumpForce;
+        playerPhysics.isGrounded = false;
+      }
+    }
+
+    function attackNormal() {
+      if (gameState.player.isAttacking || gameState.player.attackCooldown > 0) return;
+      gameState.player.isAttacking = true;
+      gameState.player.attackCooldown = gameState.player.attackDuration;
+
+      gameState.player.lastCombatTime = clock.getElapsedTime();
+
+      const fwd = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), playerGroup.rotation.y);
+      spawnSlashEffect(playerGroup.position, fwd, gameState.player.transform.active && gameState.player.transform.type === 'kitsune');
+
+      setTimeout(() => {
+        enemies.forEach(e => {
+          if (e.aiState === 'DEAD') return;
+          const dist = e.group.position.distanceTo(playerGroup.position);
+          const toEnemy = e.group.position.clone().sub(playerGroup.position).normalize();
+          if (dist < 5.2 && fwd.angleTo(toEnemy) < Math.PI / 2.3) {
+            applyDamageToEnemy(e, Math.floor(gameState.player.attackPower + Math.random() * 8), false);
+          }
+        });
+      }, 80);
+    }
+
+    function showDamagePopup(text, position, isCrit = false, isGold = false, isHeal = false) {
+      const popContainer = document.getElementById('damage-container');
+      const pop = document.createElement('div');
+      pop.className = `damage-pop ${isCrit ? 'crit' : ''} ${isGold ? 'gold' : ''} ${isHeal ? 'heal' : ''}`;
+      pop.innerText = text;
+
+      const screenPos = position.clone().project(camera);
+      const x = (screenPos.x * 0.5 + 0.5) * window.innerWidth;
+      const y = (-(screenPos.y * 0.5) + 0.5) * window.innerHeight;
+
+      pop.style.left = `${x}px`;
+      pop.style.top = `${y}px`;
+      popContainer.appendChild(pop);
+      setTimeout(() => pop.remove(), 800);
+    }
+
+    function addGold(amount, pos) {
+      gameState.player.gold += amount;
+      document.getElementById('gold-txt').innerText = gameState.player.gold;
+      if (pos) {
+        showDamagePopup(`+${amount} Gold 💰`, pos.clone().add(new THREE.Vector3(0, 1.2, 0)), false, true);
+      }
+    }
+
+    function applyDamageToEnemy(enemy, damage, isCrit = false, explosionOrigin = null) {
+      if (enemy.aiState === 'DEAD') return;
+
+      enemy.hp = Math.max(0, enemy.hp - damage);
+      showDamagePopup(damage, enemy.group.position, isCrit);
+
+      const ratio = Math.max(0, enemy.hp / enemy.maxHp);
+      enemy.hpBarFill.scale.set(ratio, 1, 1);
+      enemy.hpBarFill.position.x = -(1 - ratio) * 0.85;
+
+      let knockDir = new THREE.Vector3();
+      if (explosionOrigin) {
+        knockDir.copy(enemy.group.position).sub(explosionOrigin).normalize();
+        knockDir.y = 0.45;
+        enemy.velocity.add(knockDir.multiplyScalar(enemy.isBoss ? 8 : 20));
+      } else {
+        knockDir = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), playerGroup.rotation.y);
+        knockDir.y = 0.2;
+        enemy.velocity.add(knockDir.multiplyScalar(enemy.isBoss ? 4 : 12));
+      }
+
+      if (enemy.hp <= 0) {
+        enemy.aiState = 'DEAD';
+        enemy.group.visible = false;
+        enemy.respawnTimer = enemy.isBoss ? 12.0 : 6.0;
+
+        addGold(enemy.goldReward, enemy.group.position);
+        addExp(enemy.expReward);
+        addFruitExp(enemy.fruitExpReward);
+
+        // クエスト進捗チェック
+        if (gameState.quest.status === 'ACTIVE') {
+          const q = gameState.quest;
+          let isMatch = false;
+          if (q.isBossQuest) {
+            isMatch = (q.island === 1 && enemy.name.includes("アイアンハート")) || (q.island === 2 && enemy.name.includes("ヴォルカノ"));
+          } else {
+            isMatch = (q.island === 1 && enemy.level <= 3) || (q.island === 2 && enemy.level >= 8 && !enemy.isBoss);
+          }
+
+          if (isMatch) {
+            q.currentKills++;
+            updateQuestUI();
+            if (q.currentKills >= q.targetKills) {
+              q.status = 'CAN_COMPLETE';
+              updateQuestUI();
+              const ann = document.getElementById('announcement');
+              ann.innerText = 'QUEST READY!';
+              ann.style.opacity = '1';
+              setTimeout(() => { ann.style.opacity = '0'; }, 1500);
+            }
+          }
+        }
+      }
+    }
+
+    function applyDamageToPlayer(amount) {
+      if (gameState.player.inSafeZone) return;
+
+      gameState.player.lastCombatTime = clock.getElapsedTime();
+
+      // ★ 変身中の防御力補正・ダメージ軽減
+      let actualDamage = amount;
+      if (gameState.player.transform.active) {
+        if (gameState.player.transform.type === 'kitsune') actualDamage *= 0.70; // 30%カット
+        if (gameState.player.transform.type === 'phoenix') actualDamage *= 0.50; // 50%カット
+      }
+      actualDamage = Math.max(1, Math.floor(actualDamage));
+
+      gameState.player.hp = Math.max(0, gameState.player.hp - actualDamage);
+      document.getElementById('hp-bar').style.width = `${(gameState.player.hp / gameState.player.maxHp) * 100}%`;
+
+      if (gameState.player.hp <= 0) {
+        deactivateTransformation();
+        gameState.player.hp = gameState.player.maxHp;
+        document.getElementById('hp-bar').style.width = '100%';
+        const respawnPos = gameState.player.currentIsland === 1 ? new THREE.Vector3(0, 11, 0) : new THREE.Vector3(180, 12, -145);
+        playerGroup.position.copy(respawnPos);
+        playerPhysics.velocity.set(0, 0, 0);
+      }
+    }
+
+    function addExp(amount) {
+      gameState.player.exp += amount;
+      if (gameState.player.exp >= gameState.player.maxExp) {
+        gameState.player.exp -= gameState.player.maxExp;
+        gameState.player.level++;
+        gameState.player.maxExp = Math.floor(gameState.player.maxExp * 1.5);
+        gameState.player.baseHp += 20;
+        gameState.player.maxHp = gameState.player.baseHp;
+        gameState.player.hp = gameState.player.maxHp;
+        gameState.player.baseAttackPower += 8;
+        if (!gameState.player.transform.active) {
+          gameState.player.attackPower = gameState.player.baseAttackPower;
+        }
+
+        document.getElementById('level-txt').innerText = `Lv. ${gameState.player.level}`;
+        document.getElementById('hp-bar').style.width = '100%';
+
+        const ann = document.getElementById('announcement');
+        ann.innerHTML = `LEVEL UP!<br><span style="font-size:22px; color:#00ffcc;">Lv. ${gameState.player.level}</span>`;
+        ann.style.opacity = '1';
+        ann.style.transform = 'translate(-50%, -50%) scale(1.2)';
+        setTimeout(() => {
+          ann.style.opacity = '0';
+          ann.style.transform = 'translate(-50%, -50%) scale(1)';
+        }, 1500);
+      }
+      document.getElementById('exp-bar').style.width = `${(gameState.player.exp / gameState.player.maxExp) * 100}%`;
+    }
+
+    // ==========================================
+    // 11. 商人モーダル ＆ ボスクエスト選択
+    // ==========================================
+    const promptBtn = document.getElementById('interact-prompt');
+    const boatPrompt = document.getElementById('boat-prompt');
+    const btnQuestAction = document.getElementById('btn-quest-action');
+    const tabNormalQuest = document.getElementById('tab-normal-quest');
+    const tabBossQuest = document.getElementById('tab-boss-quest');
+
+    let currentSelectedQuestIsBoss = false;
+
+    function renderQuestInfoInModal() {
+      const qInfo = document.getElementById('modal-quest-info');
+      const isIsland1 = (currentInteractingNPC === 1);
+
+      if (!currentSelectedQuestIsBoss) {
+        if (isIsland1) {
+          qInfo.innerHTML = `
+            島の野盗海賊が交易船を狙っている！やつらを3体懲らしめてくれ！<br>
+            <span style="color:#ffd700;">報酬: 100 Gold / 120 EXP / 実EXP +60</span>
+          `;
+        } else {
+          qInfo.innerHTML = `
+            火山の略奪者どもが要塞を包囲している！精鋭海賊を4体討伐してくれ！<br>
+            <span style="color:#ffd700;">報酬: 250 Gold / 300 EXP / 実EXP +150</span>
+          `;
+        }
+      } else {
+        if (isIsland1) {
+          qInfo.innerHTML = `
+            【緊急指令】高台の海賊船長「アイアンハート」を討ち取れ！<br>
+            <span style="color:#ff4444; font-weight:bold;">推奨Lv: 4以上</span><br>
+            <span style="color:#ffd700;">報酬: 350 Gold / 450 EXP / 実EXP +180</span>
+          `;
+        } else {
+          qInfo.innerHTML = `
+            【緊急指令】火口に潜む災厄「ヴォルカノ・タイタン」を粉砕せよ！<br>
+            <span style="color:#ff4444; font-weight:bold;">推奨Lv: 12以上</span><br>
+            <span style="color:#ffd700;">報酬: 900 Gold / 1400 EXP / 実EXP +450</span>
+          `;
+        }
+      }
+    }
+
+    tabNormalQuest.addEventListener('click', () => {
+      currentSelectedQuestIsBoss = false;
+      tabNormalQuest.classList.add('active');
+      tabBossQuest.classList.remove('active');
+      renderQuestInfoInModal();
+    });
+
+    tabBossQuest.addEventListener('click', () => {
+      currentSelectedQuestIsBoss = true;
+      tabBossQuest.classList.add('active');
+      tabNormalQuest.classList.remove('active');
+      renderQuestInfoInModal();
+    });
+
+    function updateQuestUI() {
+      const q = gameState.quest;
+      const descEl = document.getElementById('quest-desc');
+      const progEl = document.getElementById('quest-progress');
+      const titleEl = document.getElementById('quest-island-title');
+
+      titleEl.innerText = q.island === 1 ? (q.isBossQuest ? "ドーン島 ボス討伐" : "ドーン島 クエスト") : (q.isBossQuest ? "カルデラ島 ボス討伐" : "カルデラ島 クエスト");
+
+      if (q.status === 'NOT_ACCEPTED') {
+        descEl.innerText = "NPCに話しかけて依頼を受けよう";
+        progEl.innerText = "状態: 未受注";
+        btnQuestAction.innerText = "この依頼を受注する";
+        btnQuestAction.disabled = false;
+      } else if (q.status === 'ACTIVE') {
+        descEl.innerText = `${q.title} (${q.currentKills}/${q.targetKills})`;
+        progEl.innerHTML = `<span style="color:#00ffcc;">進行中: ${q.currentKills} / ${q.targetKills} 撃破</span>`;
+        btnQuestAction.innerText = `討伐中 (${q.currentKills}/${q.targetKills})`;
+        btnQuestAction.disabled = true;
+      } else if (q.status === 'CAN_COMPLETE') {
+        descEl.innerText = "依頼完了！報告して報酬を受け取ろう";
+        progEl.innerHTML = `<span style="color:#ffe600;">報告可能！戻って報告せよ</span>`;
+        btnQuestAction.innerText = "報酬を受け取る！";
+        btnQuestAction.disabled = false;
+      } else if (q.status === 'COMPLETED') {
+        descEl.innerText = "次の依頼を準備中...";
+        progEl.innerHTML = `<span style="color:#00ffcc;">完了済み</span>`;
+        btnQuestAction.innerText = "依頼完了済み";
+        btnQuestAction.disabled = true;
+      }
+    }
+
+    let currentInteractingNPC = 1;
+
+    function interactWithNearestNPC() {
+      const dist1 = playerGroup.position.distanceTo(npc1.position);
+      const dist2 = playerGroup.position.distanceTo(npc2.position);
+
+      if (dist1 < 5.5) {
+        currentInteractingNPC = 1;
+        document.getElementById('modal-npc-name').innerText = "⛵ 商人バルバロの交易所";
+        renderQuestInfoInModal();
+        modal.style.display = 'block';
+        updateQuestUI();
+      } else if (dist2 < 5.5) {
+        currentInteractingNPC = 2;
+        document.getElementById('modal-npc-name').innerText = "🌋 司令官ロアの火山要塞";
+        renderQuestInfoInModal();
+        modal.style.display = 'block';
+        updateQuestUI();
+      }
+    }
+
+    document.getElementById('modal-close-btn').addEventListener('click', () => { modal.style.display = 'none'; });
+
+    btnQuestAction.addEventListener('click', () => {
+      const q = gameState.quest;
+      if (q.status === 'NOT_ACCEPTED') {
+        q.status = 'ACTIVE';
+        q.currentKills = 0;
+        q.island = currentInteractingNPC;
+        q.isBossQuest = currentSelectedQuestIsBoss;
+
+        if (!currentSelectedQuestIsBoss) {
+          if (q.island === 1) {
+            q.title = "野盗海賊の討伐";
+            q.targetKills = 3;
+            q.rewardGold = 100;
+            q.rewardExp = 120;
+            q.rewardFruitExp = 60;
+          } else {
+            q.title = "火山の精鋭海賊討伐";
+            q.targetKills = 4;
+            q.rewardGold = 250;
+            q.rewardExp = 300;
+            q.rewardFruitExp = 150;
+          }
+        } else {
+          if (q.island === 1) {
+            q.title = "船長アイアンハート討伐";
+            q.targetKills = 1;
+            q.rewardGold = 350;
+            q.rewardExp = 450;
+            q.rewardFruitExp = 180;
+          } else {
+            q.title = "ヴォルカノ・タイタン討伐";
+            q.targetKills = 1;
+            q.rewardGold = 900;
+            q.rewardExp = 1400;
+            q.rewardFruitExp = 450;
+          }
+        }
+
+        updateQuestUI();
+      } else if (q.status === 'CAN_COMPLETE') {
+        q.status = 'COMPLETED';
+        addGold(q.rewardGold);
+        addExp(q.rewardExp);
+        addFruitExp(q.rewardFruitExp);
+        updateQuestUI();
+        const ann = document.getElementById('announcement');
+        ann.innerText = 'QUEST CLEARED!';
+        ann.style.opacity = '1';
+        setTimeout(() => {
+          ann.style.opacity = '0';
+          setTimeout(() => {
+            q.status = 'NOT_ACCEPTED';
+            updateQuestUI();
+          }, 3500);
+        }, 1500);
+      }
+    });
+
+    function buyFruit(fruitId, cost) {
+      if (gameState.player.gold >= cost) {
+        gameState.player.gold -= cost;
+        document.getElementById('gold-txt').innerText = gameState.player.gold;
+        gameState.player.inventory.push(fruitId);
+        showDamagePopup(`🎒 ${FRUIT_DATABASE[fruitId].name} を鞄に入れた!`, playerGroup.position, true);
+      } else {
+        showDamagePopup("所持金が足りません！", playerGroup.position);
+      }
+    }
+
+    document.getElementById('btn-buy-flame').addEventListener('click', () => buyFruit('flame', 60));
+    document.getElementById('btn-buy-thunder').addEventListener('click', () => buyFruit('thunder', 100));
+    document.getElementById('btn-buy-ice').addEventListener('click', () => buyFruit('ice', 150));
+    document.getElementById('btn-buy-kitsune').addEventListener('click', () => buyFruit('kitsune', 220));
+    document.getElementById('btn-buy-phoenix').addEventListener('click', () => buyFruit('phoenix', 260));
+    document.getElementById('btn-buy-leopard').addEventListener('click', () => buyFruit('leopard', 320));
+
+    function travelBoat() {
+      const distBoat1 = playerGroup.position.distanceTo(boat1.position);
+      const distBoat2 = playerGroup.position.distanceTo(boat2.position);
+
+      if (distBoat1 < 8.0) {
+        playerGroup.position.set(180, 2.5, -114);
+        gameState.player.currentIsland = 2;
+        showDamagePopup("⛵ カルデラ火山島に到着!", playerGroup.position, true);
+      } else if (distBoat2 < 8.0) {
+        playerGroup.position.set(0, 2.5, 60);
+        gameState.player.currentIsland = 1;
+        showDamagePopup("⛵ ドーン島に到着!", playerGroup.position, true);
+      }
+    }
+
+    // ==========================================
+    // 12. メインゲームループ
+    // ==========================================
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const delta = Math.min(clock.getDelta(), 0.05);
+      const time = clock.getElapsedTime();
+
+      ocean.position.y = -0.4 + Math.sin(time * 1.5) * 0.16;
+      safeZoneRings.forEach(r => r.rotation.z += 0.2 * delta);
+
+      // ★ 変身タイマーの更新
+      const pTransform = gameState.player.transform;
+      if (pTransform.active) {
+        pTransform.timer -= delta;
+        document.getElementById('transform-timer-txt').innerText = Math.ceil(pTransform.timer);
+
+        // 不死鳥変身中は常時毎秒8%自動回復
+        if (pTransform.type === 'phoenix' && gameState.player.hp < gameState.player.maxHp) {
+          gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + gameState.player.maxHp * 0.08 * delta);
+          document.getElementById('hp-bar').style.width = `${(gameState.player.hp / gameState.player.maxHp) * 100}%`;
+        }
+
+        if (pTransform.timer <= 0) {
+          deactivateTransformation();
+          showDamagePopup("変身が解除されました", playerGroup.position);
+        }
+      }
+
+      // HP自然回復
+      const timeSinceCombat = time - gameState.player.lastCombatTime;
+      const canRegen = (timeSinceCombat >= 5.0) && (gameState.player.hp < gameState.player.maxHp);
+      const regenBadge = document.getElementById('regen-badge');
+
+      if (canRegen) {
+        regenBadge.style.display = 'flex';
+        gameState.player.regenTimer += delta;
+
+        if (gameState.player.regenTimer >= 1.0) {
+          gameState.player.regenTimer -= 1.0;
+          const healAmount = Math.ceil(gameState.player.maxHp * 0.10);
+          gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + healAmount);
+          document.getElementById('hp-bar').style.width = `${(gameState.player.hp / gameState.player.maxHp) * 100}%`;
+          
+          showDamagePopup(`+${healAmount} HP 💚`, playerGroup.position, false, false, true);
+          spawnHealParticles(playerGroup.position);
+        }
+      } else {
+        regenBadge.style.display = 'none';
+        gameState.player.regenTimer = 0;
+      }
+
+      // クールダウン
+      if (gameState.player.currentFruit) {
+        const fruit = FRUIT_DATABASE[gameState.player.currentFruit];
+        const cdIds = ['cd-z', 'cd-x', 'cd-c', 'cd-v'];
+        for (let i = 0; i < 4; i++) {
+          if (gameState.player.skillCooldowns[i] > 0) {
+            gameState.player.skillCooldowns[i] -= delta;
+            const ratio = Math.max(0, gameState.player.skillCooldowns[i] / fruit.skills[i].cd);
+            document.getElementById(cdIds[i]).style.height = `${ratio * 100}%`;
+          } else {
+            document.getElementById(cdIds[i]).style.height = '0%';
+          }
+        }
+      }
+
+      if (gameState.player.attackCooldown > 0) {
+        gameState.player.attackCooldown -= delta;
+        const progress = 1.0 - (gameState.player.attackCooldown / gameState.player.attackDuration);
+        if (progress < 0.35) {
+          swordGroup.rotation.x = THREE.MathUtils.lerp(SWORD_DEFAULT_ROT_X, Math.PI * 0.95, progress / 0.35);
+        } else {
+          swordGroup.rotation.x = THREE.MathUtils.lerp(Math.PI * 0.95, SWORD_DEFAULT_ROT_X, (progress - 0.35) / 0.65);
+        }
+      } else {
+        gameState.player.isAttacking = false;
+        swordGroup.rotation.x = SWORD_DEFAULT_ROT_X;
+      }
+
+      let inputX = touchInput.moveX;
+      let inputZ = touchInput.moveZ;
+      if (keys['KeyW']) inputZ += 1;
+      if (keys['KeyS']) inputZ -= 1;
+      if (keys['KeyA']) inputX -= 1;
+      if (keys['KeyD']) inputX += 1;
+
+      const inputLen = Math.hypot(inputX, inputZ);
+      if (inputLen > 1) {
+        inputX /= inputLen;
+        inputZ /= inputLen;
+      }
+
+      const camForward = new THREE.Vector3(-Math.sin(mouse.theta), 0, -Math.cos(mouse.theta));
+      const camRight = new THREE.Vector3(Math.cos(mouse.theta), 0, -Math.sin(mouse.theta));
+      const moveDir = camForward.clone().multiplyScalar(inputZ).add(camRight.clone().multiplyScalar(inputX));
+
+      const isMoving = moveDir.lengthSq() > 0.001;
+      if (isMoving) {
+        const nextX = playerGroup.position.x + moveDir.x * gameState.player.speed * delta;
+        const nextZ = playerGroup.position.z + moveDir.z * gameState.player.speed * delta;
+
+        playerGroup.position.x = nextX;
+        playerGroup.position.z = nextZ;
+
+        resolveWorldCollisions(playerGroup.position, 0.7);
+
+        const targetRot = Math.atan2(moveDir.x, moveDir.z);
+        let diff = targetRot - playerGroup.rotation.y;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        playerGroup.rotation.y += diff * 12 * delta;
+
+        leftLeg.rotation.x = Math.sin(time * 12) * 0.8;
+        rightLeg.rotation.x = -Math.sin(time * 12) * 0.8;
+        leftArm.rotation.x = -Math.sin(time * 12) * 0.8;
+      } else {
+        leftLeg.rotation.x = THREE.MathUtils.lerp(leftLeg.rotation.x, 0, 0.1);
+        rightLeg.rotation.x = THREE.MathUtils.lerp(rightLeg.rotation.x, 0, 0.1);
+        leftArm.rotation.x = THREE.MathUtils.lerp(leftArm.rotation.x, 0, 0.1);
+        torso.position.y = 1.8 + Math.sin(time * 2.5) * 0.04;
+      }
+
+      const groundHeight = getGroundHeight(playerGroup.position.x, playerGroup.position.z);
+      playerPhysics.velocity.y += playerPhysics.gravity * delta;
+      playerGroup.position.y += playerPhysics.velocity.y * delta;
+
+      if (groundHeight !== null) {
+        if (playerPhysics.velocity.y <= 0 && playerGroup.position.y <= groundHeight + 0.35) {
+          playerGroup.position.y = groundHeight;
+          playerPhysics.velocity.y = 0;
+          playerPhysics.isGrounded = true;
+          gameState.player.fallTimer = 0;
+        } else {
+          playerPhysics.isGrounded = false;
+        }
+      } else {
+        playerPhysics.isGrounded = false;
+        if (playerGroup.position.y < -0.2) {
+          gameState.player.fallTimer += delta;
+          if (playerGroup.position.y < -3.5 || gameState.player.fallTimer > 1.2) {
+            applyDamageToPlayer(15);
+            const d1 = Math.hypot(playerGroup.position.x, playerGroup.position.z);
+            const d2 = Math.hypot(playerGroup.position.x - 180, playerGroup.position.z - (-180));
+            playerGroup.position.copy(d1 < d2 ? new THREE.Vector3(0, 11, 0) : new THREE.Vector3(180, 12, -145));
+            playerPhysics.velocity.set(0, 0, 0);
+            gameState.player.fallTimer = 0;
+          }
+        }
+      }
+
+      // セーフゾーン
+      let inAnySafe = false;
+      gameState.safeZones.forEach(sz => {
+        if (Math.hypot(playerGroup.position.x - sz.x, playerGroup.position.z - sz.z) < sz.radius) inAnySafe = true;
+      });
+      gameState.player.inSafeZone = inAnySafe;
+      document.getElementById('safe-zone-badge').style.display = inAnySafe ? 'flex' : 'none';
+
+      // NPCプロンプト
+      const dNPC1 = playerGroup.position.distanceTo(npc1.position);
+      const dNPC2 = playerGroup.position.distanceTo(npc2.position);
+      promptBtn.style.display = (dNPC1 < 4.8 || dNPC2 < 4.8) && modal.style.display !== 'block' ? 'block' : 'none';
+
+      // 船プロンプト
+      const dBoat1 = playerGroup.position.distanceTo(boat1.position);
+      const dBoat2 = playerGroup.position.distanceTo(boat2.position);
+      boatPrompt.style.display = (dBoat1 < 7.0 || dBoat2 < 7.0) ? 'block' : 'none';
+      if (dBoat1 < 7.0) boatPrompt.innerText = "[T] カルデラ島へ出航";
+      if (dBoat2 < 7.0) boatPrompt.innerText = "[T] ドーン島へ出航";
+
+      // カメラ追従
+      const camTargetPos = playerGroup.position.clone().add(new THREE.Vector3(0, 2.2, 0));
+      const camOffsetX = mouse.distance * Math.sin(mouse.theta) * Math.cos(mouse.phi);
+      const camOffsetY = mouse.distance * Math.sin(mouse.phi);
+      const camOffsetZ = mouse.distance * Math.cos(mouse.theta) * Math.cos(mouse.phi);
+      camera.position.set(camTargetPos.x + camOffsetX, camTargetPos.y + camOffsetY, camTargetPos.z + camOffsetZ);
+      camera.lookAt(camTargetPos);
+
+      // ★ ボスHPバー表示判定
+      let nearbyBoss = null;
+      [boss1, boss2].forEach(b => {
+        if (!b.isDead && playerGroup.position.distanceTo(b.group.position) < 28.0) {
+          nearbyBoss = b;
+        }
+      });
+      const bossHud = document.getElementById('boss-hud');
+      if (nearbyBoss) {
+        bossHud.style.display = 'block';
+        document.getElementById('boss-name-txt').innerText = `BOSS: ${nearbyBoss.name} (Lv.${nearbyBoss.level})`;
+        document.getElementById('boss-hp-txt').innerText = `${Math.ceil(nearbyBoss.hp)} / ${nearbyBoss.maxHp}`;
+        document.getElementById('boss-hp-bar').style.width = `${Math.max(0, (nearbyBoss.hp / nearbyBoss.maxHp) * 100)}%`;
+      } else {
+        bossHud.style.display = 'none';
+      }
+
+      // 敵AI更新
+      enemies.forEach(e => {
+        if (e.aiState === 'DEAD') {
+          e.respawnTimer -= delta;
+          if (e.respawnTimer <= 0) {
+            e.aiState = 'IDLE';
+            e.hp = e.maxHp;
+            e.group.position.copy(e.basePos);
+            e.group.visible = true;
+            e.hpBarFill.scale.set(1, 1, 1);
+            e.hpBarFill.position.x = 0;
+          }
+          return;
+        }
+
+        e.hpBarBg.quaternion.copy(camera.quaternion);
+        e.hpBarFill.quaternion.copy(camera.quaternion);
+
+        if (e.freezeTimer > 0) {
+          e.freezeTimer -= delta;
+          e.velocity.set(0, 0, 0);
+          return;
+        }
+
+        e.group.position.add(e.velocity.clone().multiplyScalar(delta));
+        e.velocity.multiplyScalar(Math.exp(-6.0 * delta));
+
+        const isKnocked = e.velocity.lengthSq() > 0.8;
+        const distToPlayer = e.group.position.distanceTo(playerGroup.position);
+        const aggroDist = e.isBoss ? 32 : 24;
+
+        if (!isKnocked) {
+          if (gameState.player.inSafeZone) {
+            e.aiState = 'IDLE';
+          } else if (distToPlayer <= (e.isBoss ? 3.5 : 2.2)) {
+            e.aiState = 'ATTACK';
+            e.attackCooldown -= delta;
+            if (e.attackCooldown <= 0) {
+              e.attackCooldown = e.isBoss ? 1.6 : 1.4;
+              applyDamageToPlayer(e.attackPower);
+            }
+          } else if (distToPlayer < aggroDist) {
+            e.aiState = 'CHASE';
+            const chaseDir = playerGroup.position.clone().sub(e.group.position).normalize();
+            e.group.position.x += chaseDir.x * e.speed * delta;
+            e.group.position.z += chaseDir.z * e.speed * delta;
+            e.group.rotation.y = Math.atan2(chaseDir.x, chaseDir.z);
+          } else {
+            e.aiState = 'IDLE';
+          }
+        }
+
+        gameState.safeZones.forEach(sz => {
+          const distToSafe = Math.hypot(e.group.position.x - sz.x, e.group.position.z - sz.z);
+          if (distToSafe < sz.radius + 1.0) {
+            const pushOutDir = new THREE.Vector2(e.group.position.x - sz.x, e.group.position.z - sz.z).normalize();
+            e.group.position.x = sz.x + pushOutDir.x * (sz.radius + 1.0);
+            e.group.position.z = sz.z + pushOutDir.y * (sz.radius + 1.0);
+          }
+        });
+
+        resolveWorldCollisions(e.group.position, e.isBoss ? 1.4 : 0.8);
+
+        const enemyGround = getGroundHeight(e.group.position.x, e.group.position.z);
+        if (enemyGround !== null) {
+          e.group.position.y = enemyGround;
+        } else if (e.group.position.y < -2.0) {
+          e.group.position.copy(e.basePos);
+          e.velocity.set(0, 0, 0);
+        }
+      });
+
+      // 投射物処理
+      for (let i = projectiles.length - 1; i >= 0; i--) {
+        const prj = projectiles[i];
+        prj.mesh.position.add(prj.direction.clone().multiplyScalar(prj.speed * delta));
+        prj.life -= delta;
+
+        let hitEnemy = false;
+        for (const e of enemies) {
+          if (e.aiState === 'DEAD') continue;
+          const eCenter = e.group.position.clone().add(new THREE.Vector3(0, 1.5, 0));
+          if (prj.mesh.position.distanceTo(eCenter) < (e.isBoss ? 3.0 : 2.2)) {
+            hitEnemy = true;
+            applyDamageToEnemy(e, prj.damage, true);
+            addFruitExp(15);
+            if (prj.type === 'thunder_stun') {
+              e.freezeTimer = 2.5;
+              showDamagePopup("⚡ 感電麻痺!", e.group.position, true);
+            }
+            break;
+          }
+        }
+
+        const groundY = getGroundHeight(prj.mesh.position.x, prj.mesh.position.z);
+        const hitGround = groundY !== null && prj.mesh.position.y <= groundY;
+        const hitSea = groundY === null && prj.mesh.position.y <= -0.5;
+
+        if (hitEnemy || hitGround || hitSea || prj.life <= 0) {
+          spawnFireTrail(prj.mesh.position, 10);
+          scene.remove(prj.mesh);
+          projectiles.splice(i, 1);
+        }
+      }
+
+      // パーティクル更新
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life -= delta;
+        p.mesh.position.add(p.velocity.clone().multiplyScalar(delta));
+        const alpha = p.life / p.maxLife;
+        p.mesh.scale.set(alpha, alpha, alpha);
+        if (p.life <= 0) {
+          scene.remove(p.mesh);
+          particles.splice(i, 1);
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    updateFruitHotbarUI();
+    animate();
+  </script>
+</body>
+</html>
