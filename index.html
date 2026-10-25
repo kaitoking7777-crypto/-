@@ -730,6 +730,170 @@
       #joystick-zone { opacity: 0.35; }
       #btn-mobile-jump { opacity: 0.35; }
     }
+
+    /* ========================================================
+       📱 スマホ・小型画面専用レスポンシブ最適化スタイル
+       ======================================================== */
+    @media (max-width: 768px), (max-height: 520px) {
+      #ui-layer {
+        padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+      }
+
+      /* 1. プレイヤーHUD (HP・EXP・レベル) の超コンパクト化 */
+      .top-left-hud {
+        gap: 4px;
+      }
+      .player-hud {
+        padding: 5px 8px;
+        gap: 7px;
+        border-radius: 10px;
+      }
+      .avatar {
+        width: 34px;
+        height: 34px;
+        font-size: 13px;
+        border-width: 1.5px;
+      }
+      .bars-container {
+        min-width: 130px;
+        max-width: 170px;
+        gap: 2px;
+      }
+      .hud-header {
+        font-size: 9.5px;
+      }
+      .level-badge {
+        font-size: 9.5px;
+      }
+      .bar-bg {
+        height: 5px !important;
+        border-radius: 3px;
+      }
+      .hud-sub-info {
+        font-size: 8.5px;
+        margin-top: 0px;
+      }
+      .exp-text-val {
+        font-size: 8px;
+      }
+      .weapon-badge, .gold-badge {
+        font-size: 8.5px;
+      }
+
+      /* 2. HUDサブ行 (鞄ボタンや各種バッジ) */
+      .hud-sub-row {
+        gap: 3px;
+        max-width: 200px;
+      }
+      .btn-hud {
+        font-size: 9px;
+        padding: 3px 8px;
+        border-radius: 6px;
+      }
+      #safe-zone-badge, #regen-badge, #haki-badge, #logia-badge, #transform-badge, #homies-badge {
+        font-size: 8.5px;
+        padding: 2px 6px;
+        border-radius: 12px;
+      }
+
+      /* 3. クエストHUDの小型化 (画面右上) */
+      .quest-hud {
+        top: max(6px, env(safe-area-inset-top));
+        right: max(6px, env(safe-area-inset-right));
+        min-width: unset;
+        max-width: 135px;
+        padding: 5px 8px;
+        border-left-width: 3px;
+        border-radius: 6px;
+      }
+      .quest-title {
+        font-size: 9px;
+        letter-spacing: 0;
+      }
+      .quest-desc {
+        font-size: 8.5px;
+        margin-top: 1px;
+        line-height: 1.15;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .quest-progress {
+        font-size: 8.5px;
+        margin-top: 1px;
+      }
+
+      /* 4. ナビゲーションHUD (画面上部中央) */
+      #nav-hud {
+        top: max(6px, env(safe-area-inset-top));
+        padding: 3px 10px;
+        gap: 5px;
+        border-radius: 14px;
+      }
+      #nav-icon { font-size: 13px; }
+      #nav-text { font-size: 10px; }
+      #nav-dist { font-size: 9.5px; }
+      #nav-key-hint { display: none; } /* スマホではキー表記不要 */
+
+      /* 5. キーボード操作ヒント (スマホでは邪魔なので非表示) */
+      .controls-hint {
+        display: none !important;
+      }
+
+      /* 6. ホットバースロットの適正化 */
+      .hotbar {
+        gap: 4px;
+      }
+      .skill-slot {
+        width: 46px;
+        height: 46px;
+        border-radius: 8px;
+        border-width: 1.5px;
+      }
+      .skill-key {
+        font-size: 7.5px;
+        top: 2px;
+        left: 3px;
+      }
+      .skill-req {
+        font-size: 7px;
+        top: 2px;
+        right: 3px;
+      }
+      .skill-name {
+        font-size: 7.5px;
+        margin-top: 6px;
+      }
+
+      /* 7. チャットボックスの小型化 */
+      #chat-box {
+        bottom: 74px;
+        left: max(8px, env(safe-area-inset-left));
+        width: 180px;
+      }
+      #chat-messages {
+        height: 50px;
+        font-size: 9px;
+        padding: 4px 6px;
+      }
+      #chat-input {
+        font-size: 9px;
+        padding: 4px 6px;
+      }
+
+      /* 8. ボスHUDの小型化 */
+      #boss-hud {
+        width: min(88vw, 320px);
+        padding: 5px 10px;
+        top: calc(max(8px, env(safe-area-inset-top)) + 30px);
+      }
+      .boss-header {
+        font-size: 10.5px;
+      }
+      .boss-bar-bg {
+        height: 9px;
+      }
+    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -1525,7 +1689,6 @@
         szRing.position.set(isl.cx, szY + 0.15, isl.cz);
         scene.add(szRing);
 
-        // 立体的な商人モデル
         const npcGroup = new THREE.Group();
         npcGroup.position.set(isl.cx, szY, isl.cz);
 
@@ -1560,7 +1723,6 @@
         npcs.push({ group: npcGroup, islandId: isl.id, name: `${isl.name.split(' ')[0]}の商人` });
       }
 
-      // 鬼竹のヴェルゴ
       if (isl.id === 2) {
         const vGroup = new THREE.Group();
         const vX = isl.cx - 18, vZ = isl.cz + 14;
@@ -1597,7 +1759,6 @@
         vergoNpc = { group: vGroup };
       }
 
-      // コロシアム実況ギャツ
       if (isl.id === 7) {
         const colGroup = new THREE.Group();
         colGroup.position.set(isl.cx, isl.baseH, isl.cz);
@@ -1647,22 +1808,19 @@
     const humanModelGroup = new THREE.Group();
     playerGroup.add(humanModelGroup);
 
-    // 高品質マテリアル
     const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdfc4, roughness: 0.65 });
-    const playerMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.75 }); // 赤シャツ
-    const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.85 }); // 青ズボン
-    const bootMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.5 }); // 革ブーツ
+    const playerMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.75 });
+    const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.85 });
+    const bootMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.5 });
     const beltMat = new THREE.MeshStandardMaterial({ color: 0x27160c });
     const goldMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.85, roughness: 0.2 });
     const hairMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.85 });
 
-    // 胴体
     const torso = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.4, 0.7), playerMat);
     torso.position.y = 1.8;
     torso.castShadow = true;
     humanModelGroup.add(torso);
 
-    // 開襟シャツの胸元＆ベルト
     const chestInner = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.85, 0.72), skinMat);
     chestInner.position.set(0, 1.95, 0.04);
     const mainBelt = new THREE.Mesh(new THREE.BoxGeometry(1.26, 0.18, 0.76), beltMat);
@@ -1671,14 +1829,12 @@
     beltBuckle.position.y = 1.25;
     humanModelGroup.add(chestInner, mainBelt, beltBuckle);
 
-    // 背中の麦わら帽子
     const backStrawHat = createStrawHat();
     backStrawHat.scale.set(0.72, 0.72, 0.72);
     backStrawHat.rotation.x = Math.PI / 2.2;
     backStrawHat.position.set(0, 1.95, -0.48);
     humanModelGroup.add(backStrawHat);
 
-    // 頭部＆表情
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.48, 16, 16), skinMat);
     head.position.y = 2.85;
     humanModelGroup.add(head);
@@ -1690,7 +1846,6 @@
     facePlane.position.set(0, 2.85, 0.44);
     humanModelGroup.add(facePlane);
 
-    // 髪型
     const hair = new THREE.Group();
     hair.position.set(0, 2.85, 0);
     const hairBase = new THREE.Mesh(new THREE.SphereGeometry(0.52, 14, 12), hairMat);
@@ -1709,7 +1864,6 @@
     });
     humanModelGroup.add(hair);
 
-    // 腕（左右）
     function makeArm() {
       const g = new THREE.Group();
       const bicep = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.15, 0.5, 8), skinMat);
@@ -1726,7 +1880,6 @@
     const leftArm = makeArm(); armLGroup.add(leftArm); humanModelGroup.add(armLGroup);
     const rightArm = makeArm(); armRGroup.add(rightArm); humanModelGroup.add(armRGroup);
 
-    // 脚（左右：折り返しブーツ）
     function makeLeg() {
       const g = new THREE.Group();
       const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.20, 0.65, 8), pantsMat);
@@ -1743,14 +1896,12 @@
     const leftLeg = makeLeg(); leftLeg.position.set(-0.35, 0.45, 0); humanModelGroup.add(leftLeg);
     const rightLeg = makeLeg(); rightLeg.position.set(0.35, 0.45, 0); humanModelGroup.add(rightLeg);
 
-    // ギア3用巨大腕
     const giantArmMesh = new THREE.Group();
     giantArmMesh.add(new THREE.Mesh(new THREE.BoxGeometry(2.4, 5.2, 2.4), skinMat));
     giantArmMesh.position.set(1.6, 2.5, 0.8);
     giantArmMesh.visible = false;
     humanModelGroup.add(giantArmMesh);
 
-    // 武器
     const weaponMeshGroup = new THREE.Group();
     const weaponBlade = new THREE.Mesh(new THREE.BoxGeometry(0.18, 2.4, 0.08), new THREE.MeshStandardMaterial({ color: 0x00ffff, metalness: 0.85, roughness: 0.2 }));
     weaponBlade.position.y = 1.2;
@@ -1762,7 +1913,6 @@
     weaponMeshGroup.rotation.x = SWORD_ROT_DEFAULT;
     humanModelGroup.add(weaponMeshGroup);
 
-    // ガイド矢印＆ビーコン
     const navArrowGroup = new THREE.Group();
     scene.add(navArrowGroup);
     const navArrowCone = new THREE.Mesh(new THREE.ConeGeometry(0.65, 1.8, 12), new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 0.7 }));
@@ -1797,7 +1947,6 @@
       }
     }
 
-    // 変身モデル群
     const kitsuneBeast = new THREE.Group();
     kitsuneBeast.add(new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.3, 2.8), new THREE.MeshStandardMaterial({ color: 0xfffbeb })));
     for (let i = 0; i < 9; i++) {
@@ -3182,7 +3331,6 @@
         while (diff > Math.PI) diff -= Math.PI * 2;
         playerGroup.rotation.y += diff * 12 * delta;
 
-        // 脚振り歩行アニメーション
         if (!p.transform.active) {
           leftLeg.rotation.x = Math.sin(time * 12) * 0.7;
           rightLeg.rotation.x = -Math.sin(time * 12) * 0.7;
@@ -3453,4 +3601,3 @@
   </script>
 </body>
 </html>
-```
